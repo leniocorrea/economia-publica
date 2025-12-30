@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<EconomIAWeaverTargetFramework>netstandard2.1</EconomIAWeaverTargetFramework>
+	</PropertyGroup>
+	<ItemGroup>
+		<WeaverFiles Include="..\EconomIA.Common.Fody\bin\$(Configuration)\$(EconomIAWeaverTargetFramework)\EconomIA.Common.Fody.dll" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\EconomIA.Common.EntityFramework\EconomIA.Common.EntityFramework.csproj" />
+		<ProjectReference Include="..\EconomIA.Domain\EconomIA.Domain.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Elastic.Clients.Elasticsearch" />
+		<PackageReference Include="Fody" PrivateAssets="all" />
+		<PackageReference Include="Google.Cloud.BigQuery.V2" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Proxies" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+		<PackageReference Include="Npgsql" />
+		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="Persistence\Migrations\" />
+	</ItemGroup>
+</Project>

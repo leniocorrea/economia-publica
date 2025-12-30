@@ -1,0 +1,96 @@
+services:
+  # Servidor PostgreSQL com suporte a pgvector
+  economia-postgresql:
+    container_name: economia-postgresql
+    image: pgvector/pgvector:pg16
+    ports:
+      - "${POSTGRES__CREDENCIAIS__PORT:-5432}:5432"
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES__CREDENCIAIS__USER}
+      - POSTGRES_PASSWORD=${POSTGRES__CREDENCIAIS__PASSWORD}
+      - POSTGRES_DB=economia
+    volumes:
+      - economia-postgres-data:/var/lib/postgresql/data
+      - ./docker/postgresql/01_criar_banco.sql:/docker-entrypoint-initdb.d/01_criar_banco.sql:ro
+    networks:
+      - economia-rede
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB:-postgres} -h localhost || exit 1" ]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+
+  # Elasticsearch
+  economia-elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.16.1
+    container_name: economia-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - economia-elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - economia-rede
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1" ]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 20s
+
+  # API de Busca
+  economia-api:
+    container_name: economia-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=economia-postgresql;Port=5432;Database=economia;Username=${POSTGRES__CREDENCIAIS__USER};Password=${POSTGRES__CREDENCIAIS__PASSWORD}
+      - ConnectionStrings__Elasticsearch=http://economia-elasticsearch:9200
+      - ASPNETCORE_ENVIRONMENT=${DOTNET_ENVIRONMENT:-Development}
+    depends_on:
+      economia-postgresql:
+        condition: service_healthy
+      economia-elasticsearch:
+        condition: service_healthy
+    networks:
+      - economia-rede
+
+  # Aplicacao de Carga de Dados
+  economia-carga-de-dados:
+    container_name: economia-carga-de-dados
+    build:
+      context: .
+      dockerfile: EconomIA.CargaDeDados/Dockerfile
+    environment:
+      - ConnectionStrings__PostgreSQL=Host=economia-postgresql;Port=5432;Database=economia;Username=${POSTGRES__CREDENCIAIS__USER};Password=${POSTGRES__CREDENCIAIS__PASSWORD}
+      - ElasticSearch__Uri=http://economia-elasticsearch:9200
+      - DOTNET_ENVIRONMENT=${DOTNET_ENVIRONMENT:-Development}
+    depends_on:
+      economia-postgresql:
+        condition: service_healthy
+      economia-elasticsearch:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - economia-rede
+    profiles:
+      - carga
+
+networks:
+  economia-rede:
+    name: economia-rede
+    driver: bridge
+
+volumes:
+  economia-postgres-data:
+    name: economia-postgres-data
+  economia-elasticsearch-data:
+    name: economia-elasticsearch-data

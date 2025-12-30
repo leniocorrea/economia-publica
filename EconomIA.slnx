@@ -1,0 +1,20 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitignore" />
+    <File Path="global.json" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+  </Folder>
+  <Project Path="EconomIA.Adapters\EconomIA.Adapters.csproj" />
+  <Project Path="EconomIA.Application/EconomIA.Application.csproj" />
+  <Project Path="EconomIA.Common.EntityFramework\EconomIA.Common.EntityFramework.csproj" />
+  <Project Path="EconomIA.Common.Fody.Tests\EconomIA.Common.Fody.Tests.csproj" />
+  <Project Path="EconomIA.Common.Fody\EconomIA.Common.Fody.csproj" />
+  <Project Path="EconomIA.Common.Tests\EconomIA.Common.Tests.csproj" />
+  <Project Path="EconomIA.Common\EconomIA.Common.csproj" />
+  <Project Path="EconomIA.Domain\EconomIA.Domain.csproj" />
+  <Project Path="EconomIA.Domain.Tests\EconomIA.Domain.Tests.csproj" />
+  <Project Path="EconomIA\EconomIA.csproj" />
+  <Project Path="EconomIA.CargaDeDados\EconomIA.CargaDeDados.csproj" />
+</Solution>

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<EconomIAWeaverTargetFramework>netstandard2.1</EconomIAWeaverTargetFramework>
+	</PropertyGroup>
+	<ItemGroup>
+		<WeaverFiles Include="..\EconomIA.Common.Fody\bin\$(Configuration)\$(EconomIAWeaverTargetFramework)\EconomIA.Common.Fody.dll" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\EconomIA.Common\EconomIA.Common.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Fody" PrivateAssets="all" />
+	</ItemGroup>
+</Project>
