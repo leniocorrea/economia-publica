@@ -1,0 +1,45 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+      branches:
+            - master
+
+            env:
+              PROJECT_ID: economia-publica-482719
+                REGION: us-central1
+                  SERVICE_NAME: economia-api
+                    REGISTRY: us-central1-docker.pkg.dev
+
+                    jobs:
+                      deploy:
+                          runs-on: ubuntu-latest
+                              permissions:
+                                    contents: read
+                                          id-token: write
+
+                                              steps:
+                                                    - name: Checkout
+                                                            uses: actions/checkout@v4
+
+                                                                  - name: Google Auth
+                                                                          id: auth
+                                                                                  uses: google-github-actions/auth@v2
+                                                                                          with:
+                                                                                                    workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+                                                                                                              service_account: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
+                                                                                                              
+                                                                                                                    - name: Set up Cloud SDK
+                                                                                                                            uses: google-github-actions/setup-gcloud@v2
+                                                                                                                            
+                                                                                                                                  - name: Configure Docker
+                                                                                                                                          run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+                                                                                                                                          
+                                                                                                                                                - name: Build and Push
+                                                                                                                                                        run: |
+                                                                                                                                                                  docker build -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/economia-app/${{ env.SERVICE_NAME }}:${{ github.sha }} .
+                                                                                                                                                                            docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/economia-app/${{ env.SERVICE_NAME }}:${{ github.sha }}
+                                                                                                                                                                            
+                                                                                                                                                                                  - name: Deploy to Cloud Run
+                                                                                                                                                                                          run: |
+                                                                                                                                                                                                    gcloud run deploy ${{ env.SERVICE_NAME }} --image ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/economia-app/${{ env.SERVICE_NAME }}:${{ github.sha }} --region ${{ env.REGION }} --platform managed --allow-unauthenticated --set-env-vars DB_HOST=/cloudsql/${{ secrets.CLOUD_SQL_INSTANCE }} --set-env-vars DB_USER=${{ secrets.DB_USER }} --set-env-vars DB_PASSWORD=${{ secrets.DB_PASSWORD }} --set-env-vars DB_NAME=economia --add-cloudsql-instances ${{ secrets.CLOUD_SQL_INSTANCE }} --min-instances 0 --max-instances 1 --memory 512Mi
