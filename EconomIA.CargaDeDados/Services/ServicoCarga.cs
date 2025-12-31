@@ -88,6 +88,7 @@ public class ServicoCarga {
 								ValorTotalEstimado = item.ValorTotalEstimado,
 								ValorTotalHomologado = item.ValorTotalHomologado,
 								SituacaoCompraNome = item.SituacaoCompraNome,
+								DataInclusao = item.DataInclusao,
 								DataAberturaProposta = item.DataAberturaProposta,
 								DataEncerramentoProposta = item.DataEncerramentoProposta,
 								AmparoLegalNome = item.AmparoLegal?.Nome,

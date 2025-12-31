@@ -37,6 +37,9 @@ public class Compra {
 	[Column("situacao_compra_nome")]
 	public string? SituacaoCompraNome { get; set; }
 
+	[Column("data_inclusao")]
+	public DateTime? DataInclusao { get; set; }
+
 	[Column("data_abertura_proposta")]
 	public DateTime? DataAberturaProposta { get; set; }
 
