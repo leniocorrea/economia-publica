@@ -81,7 +81,7 @@ public class ElasticsearchItemSearcher : IItensDaCompraSearcher {
 			}
 
 			if (!String.IsNullOrWhiteSpace(filters.UfSigla)) {
-				queries.Add(new TermQuery(new Field("ufSigla.keyword")) {
+				queries.Add(new TermQuery(new Field("ufSigla")) {
 					Value = filters.UfSigla.ToUpperInvariant()
 				});
 			}
