@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
@@ -22,6 +23,7 @@ public class ElasticsearchItemSearcher : IItensDaCompraSearcher {
 
 	public async Task<Result<SearchResult, RepositoryError>> Search(
 		String query,
+		SearchFilters? filters = null,
 		PaginationParameters? pagination = null,
 		CancellationToken cancellationToken = default) {
 		var limit = pagination?.Limit ?? 20;
@@ -36,13 +38,7 @@ public class ElasticsearchItemSearcher : IItensDaCompraSearcher {
 				.Index(IndexName)
 				.From(offset)
 				.Size(limit + 1)
-				.Query(q => q
-					.Match(m => m
-						.Field(f => f.Descricao)
-						.Query(query)
-						.Fuzziness(new Fuzziness("AUTO"))
-					)
-				),
+				.Query(BuildQuery(query, filters)),
 				cancellationToken
 			);
 
@@ -68,9 +64,46 @@ public class ElasticsearchItemSearcher : IItensDaCompraSearcher {
 				new RepositoryError(RepositoryErrorCode.Unknown, ex.Message));
 		}
 	}
+
+	private static Query BuildQuery(String query, SearchFilters? filters) {
+		var queries = new List<Query>();
+
+		queries.Add(new MatchQuery(new Field("descricao")) {
+			Query = query,
+			Fuzziness = new Fuzziness("AUTO")
+		});
+
+		if (filters is not null) {
+			if (!String.IsNullOrWhiteSpace(filters.RazaoSocial)) {
+				queries.Add(new MatchQuery(new Field("orgao")) {
+					Query = filters.RazaoSocial
+				});
+			}
+
+			if (!String.IsNullOrWhiteSpace(filters.UfSigla)) {
+				queries.Add(new TermQuery(new Field("ufSigla.keyword")) {
+					Value = filters.UfSigla.ToUpperInvariant()
+				});
+			}
+
+			if (filters.DataInclusaoInicio.HasValue || filters.DataInclusaoFim.HasValue) {
+				queries.Add(new DateRangeQuery(new Field("dataInclusao")) {
+					Gte = filters.DataInclusaoInicio,
+					Lte = filters.DataInclusaoFim
+				});
+			}
+		}
+
+		return new BoolQuery { Must = queries };
+	}
 }
 
 file class ItemDocument {
 	public Int64 Id { get; set; }
 	public String Descricao { get; set; } = null!;
+	public Decimal Valor { get; set; }
+	public String Orgao { get; set; } = null!;
+	public DateTime Data { get; set; }
+	public DateTime? DataInclusao { get; set; }
+	public String? UfSigla { get; set; }
 }

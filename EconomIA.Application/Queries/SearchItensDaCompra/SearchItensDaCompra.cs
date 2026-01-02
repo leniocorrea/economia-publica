@@ -13,7 +13,19 @@ using static EconomIA.Domain.Results.EconomIAErrorCodes;
 namespace EconomIA.Application.Queries.SearchItensDaCompra;
 
 public static class SearchItensDaCompra {
-	public record Query(String Descricao, String? Order, String? Cursor, Int32? Limit) : IQuery<Response>;
+	public record Query(
+		String Descricao,
+		String? Order,
+		String? Cursor,
+		Int32? Limit,
+		DateTime? DataInclusaoInicio = null,
+		DateTime? DataInclusaoFim = null,
+		String? RazaoSocial = null,
+		String? UfSigla = null,
+		Decimal? ValorUnitarioHomologadoMinimo = null,
+		Decimal? ValorUnitarioHomologadoMaximo = null,
+		Decimal? ValorTotalHomologadoMinimo = null,
+		Decimal? ValorTotalHomologadoMaximo = null) : IQuery<Response>;
 
 	public record Response(Response.Item[] Items, Int64 TotalHits, Boolean HasMoreItems, String? NextCursor) {
 		public record Item(
@@ -128,7 +140,18 @@ public static class SearchItensDaCompra {
 			}
 
 			var pagination = paginationResult.Value;
-			var searchResult = await searcher.Search(query.Descricao, pagination, cancellationToken);
+
+			var filters = new SearchFilters(
+				query.DataInclusaoInicio,
+				query.DataInclusaoFim,
+				query.RazaoSocial,
+				query.UfSigla,
+				query.ValorUnitarioHomologadoMinimo,
+				query.ValorUnitarioHomologadoMaximo,
+				query.ValorTotalHomologadoMinimo,
+				query.ValorTotalHomologadoMaximo);
+
+			var searchResult = await searcher.Search(query.Descricao, filters, pagination, cancellationToken);
 
 			if (searchResult.IsFailure) {
 				return Failure(searchResult.Error.ToItemError());
@@ -149,7 +172,31 @@ public static class SearchItensDaCompra {
 
 			var itensDoElastic = itemsResult.Value;
 
-			var numerosControlePncp = itensDoElastic
+			var itensFiltrados = itensDoElastic.AsEnumerable();
+
+			if (query.ValorUnitarioHomologadoMinimo.HasValue) {
+				itensFiltrados = itensFiltrados.Where(x =>
+					x.Resultados.Any(r => r.ValorUnitarioHomologado >= query.ValorUnitarioHomologadoMinimo.Value));
+			}
+
+			if (query.ValorUnitarioHomologadoMaximo.HasValue) {
+				itensFiltrados = itensFiltrados.Where(x =>
+					x.Resultados.Any(r => r.ValorUnitarioHomologado <= query.ValorUnitarioHomologadoMaximo.Value));
+			}
+
+			if (query.ValorTotalHomologadoMinimo.HasValue) {
+				itensFiltrados = itensFiltrados.Where(x =>
+					x.Resultados.Any(r => r.ValorTotalHomologado >= query.ValorTotalHomologadoMinimo.Value));
+			}
+
+			if (query.ValorTotalHomologadoMaximo.HasValue) {
+				itensFiltrados = itensFiltrados.Where(x =>
+					x.Resultados.Any(r => r.ValorTotalHomologado <= query.ValorTotalHomologadoMaximo.Value));
+			}
+
+			var itensParaProcessar = itensFiltrados.ToImmutableArray();
+
+			var numerosControlePncp = itensParaProcessar
 				.Where(x => x.Compra is not null)
 				.Select(x => x.Compra!.NumeroControlePncp)
 				.Distinct()
@@ -174,7 +221,7 @@ public static class SearchItensDaCompra {
 				}
 			}
 
-			var items = itensDoElastic
+			var items = itensParaProcessar
 				.Select(x => {
 					var compraItem = x.Compra is not null
 						? new Response.CompraItem(

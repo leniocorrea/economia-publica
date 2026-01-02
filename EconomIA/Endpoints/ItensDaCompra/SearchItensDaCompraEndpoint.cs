@@ -26,8 +26,28 @@ public static class SearchItensDaCompraEndpoint {
 		[FromQuery] String descricao,
 		[FromQuery] String? order,
 		[FromQuery] String? cursor,
-		[FromQuery] Int32? limit) {
-		var result = await mediator.Send(new SearchItensDaCompra.Query(descricao, order, cursor, limit));
+		[FromQuery] Int32? limit,
+		[FromQuery] DateTime? dataInclusaoInicio,
+		[FromQuery] DateTime? dataInclusaoFim,
+		[FromQuery] String? razaoSocial,
+		[FromQuery] String? ufSigla,
+		[FromQuery] Decimal? valorUnitarioHomologadoMinimo,
+		[FromQuery] Decimal? valorUnitarioHomologadoMaximo,
+		[FromQuery] Decimal? valorTotalHomologadoMinimo,
+		[FromQuery] Decimal? valorTotalHomologadoMaximo) {
+		var result = await mediator.Send(new SearchItensDaCompra.Query(
+			descricao,
+			order,
+			cursor,
+			limit,
+			dataInclusaoInicio,
+			dataInclusaoFim,
+			razaoSocial,
+			ufSigla,
+			valorUnitarioHomologadoMinimo,
+			valorUnitarioHomologadoMaximo,
+			valorTotalHomologadoMinimo,
+			valorTotalHomologadoMaximo));
 
 		return result.ToOk(Response.From);
 	}

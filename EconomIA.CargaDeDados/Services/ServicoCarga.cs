@@ -125,7 +125,9 @@ public class ServicoCarga {
 												Descricao = itemDto.Descricao ?? "",
 												Valor = itemDto.ValorUnitarioEstimado ?? 0,
 												Orgao = item.OrgaoEntidade.RazaoSocial ?? "",
-												Data = item.DataAberturaProposta ?? DateTime.MinValue
+												Data = item.DataAberturaProposta ?? DateTime.MinValue,
+												DataInclusao = item.DataInclusao,
+												UfSigla = item.UnidadeOrgao?.UfSigla
 											};
 											await elasticClient.IndexAsync(doc, token);
 										} catch (Exception ex) {

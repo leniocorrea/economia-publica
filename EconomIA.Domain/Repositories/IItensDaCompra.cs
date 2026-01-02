@@ -19,9 +19,20 @@ public interface IItensDaCompraReader : IReadRepository<ItemDaCompra> {
 public interface IItensDaCompraSearcher {
 	Task<Result<SearchResult, RepositoryError>> Search(
 		String query,
+		SearchFilters? filters = null,
 		PaginationParameters? pagination = null,
 		CancellationToken cancellationToken = default);
 }
+
+public record SearchFilters(
+	DateTime? DataInclusaoInicio,
+	DateTime? DataInclusaoFim,
+	String? RazaoSocial,
+	String? UfSigla,
+	Decimal? ValorUnitarioHomologadoMinimo,
+	Decimal? ValorUnitarioHomologadoMaximo,
+	Decimal? ValorTotalHomologadoMinimo,
+	Decimal? ValorTotalHomologadoMaximo);
 
 public record SearchResult(ImmutableArray<Int64> Ids, Int64 TotalHits, Boolean HasMoreItems);
 

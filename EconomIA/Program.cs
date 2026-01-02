@@ -74,7 +74,7 @@ using (var scope = app.Services.CreateScope()) {
 	}
 }
 
-app.MapGet("/", () => "EconomIA API v1.0.2");
+app.MapGet("/", () => "EconomIA API v1.0.3");
 app.MapOrgaosEndpoints();
 app.MapItensDaCompraEndpoints();
 
