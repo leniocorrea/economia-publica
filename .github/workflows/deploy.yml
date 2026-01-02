@@ -1,4 +1,4 @@
-name: Deploy to Compute Engine VM
+name: Build and Push
 
 on:
   push:
@@ -6,26 +6,32 @@ on:
       - master
 
 env:
-  VM_HOST: 136.113.233.79
-  VM_USER: lenio
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/economia-api
 
 jobs:
-  deploy:
+  build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          host: ${{ env.VM_HOST }}
-          username: ${{ env.VM_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          timeout: 300s
-          command_timeout: 30m
-          debug: true
-          script: |
-            cd ~/economia
-            git fetch origin master
-            git reset --hard origin/master
-            docker-compose build economia-api
-            docker-compose up -d economia-api
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}

@@ -46,9 +46,7 @@ services:
   # API de Busca
   economia-api:
     container_name: economia-api
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/leniocorrea/economia-api:latest
     ports:
       - "8080:8080"
     environment:
@@ -60,6 +58,22 @@ services:
         condition: service_healthy
       economia-elasticsearch:
         condition: service_healthy
+    networks:
+      - economia-rede
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # Watchtower - Atualiza containers automaticamente
+  watchtower:
+    container_name: watchtower
+    image: containrrr/watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=60
+      - WATCHTOWER_LABEL_ENABLE=true
     networks:
       - economia-rede
 
