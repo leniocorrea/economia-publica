@@ -6,34 +6,22 @@ on:
       - master
 
 env:
-  PROJECT_ID: economia-publica-482719
-  ZONE: us-central1-a
-  VM_NAME: economia-vm
+  VM_HOST: 136.113.233.79
+  VM_USER: lenio
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
 
     steps:
-      - name: Google Auth
-        id: auth
-        uses: google-github-actions/auth@v2
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Deploy to VM
-        run: |
-          gcloud compute ssh ${{ env.VM_NAME }} \
-            --zone=${{ env.ZONE }} \
-            --project=${{ env.PROJECT_ID }} \
-            --tunnel-through-iap \
-            --quiet \
-            --ssh-key-expire-after=1m \
-            -- "cd ~/economia && git pull origin master && docker-compose build economia-api && docker-compose up -d economia-api"
+          host: ${{ env.VM_HOST }}
+          username: ${{ env.VM_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/economia
+            git pull origin master
+            docker-compose build economia-api
+            docker-compose up -d economia-api
