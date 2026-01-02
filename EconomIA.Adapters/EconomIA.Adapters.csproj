@@ -3,6 +3,9 @@
 		<EconomIAWeaverTargetFramework>netstandard2.1</EconomIAWeaverTargetFramework>
 	</PropertyGroup>
 	<ItemGroup>
+		<InternalsVisibleTo Include="EconomIA.Adapters.Tests" />
+	</ItemGroup>
+	<ItemGroup>
 		<WeaverFiles Include="..\EconomIA.Common.Fody\bin\$(Configuration)\$(EconomIAWeaverTargetFramework)\EconomIA.Common.Fody.dll" />
 	</ItemGroup>
 	<ItemGroup>

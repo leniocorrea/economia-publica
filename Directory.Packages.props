@@ -53,6 +53,7 @@
 		<PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0" />
 		<PackageVersion Include="xunit" Version="2.9.3" />
 		<PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+		<PackageVersion Include="NSubstitute" Version="5.3.0" />
 		<PackageVersion Include="Elastic.Clients.Elasticsearch" Version="8.16.3" />
 		<PackageVersion Include="Dapper" Version="2.1.35" />
 		<PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.0" />

@@ -65,7 +65,7 @@ public class ElasticsearchItemSearcher : IItensDaCompraSearcher {
 		}
 	}
 
-	private static Query BuildQuery(String query, SearchFilters? filters) {
+	internal static BoolQuery BuildQuery(String query, SearchFilters? filters) {
 		var queries = new List<Query>();
 
 		queries.Add(new MatchQuery(new Field("descricao")) {
