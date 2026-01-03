@@ -751,6 +751,43 @@ namespace EconomIA.Adapters.Persistence.Migrations
                     b.ToTable("unidade", (string)null);
                 });
 
+            modelBuilder.Entity("EconomIA.Domain.OrgaoMonitorado", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("identificador");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<bool>("Ativo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("ativo");
+
+                    b.Property<DateTime>("AtualizadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("atualizado_em");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<long>("IdentificadorDoOrgao")
+                        .HasColumnType("bigint")
+                        .HasColumnName("identificador_do_orgao");
+
+                    b.HasKey("Id")
+                        .HasName("pk_orgao_monitorado");
+
+                    b.HasIndex("IdentificadorDoOrgao")
+                        .IsUnique()
+                        .HasDatabaseName("un_orgao_monitorado_identificador_do_orgao");
+
+                    b.ToTable("orgao_monitorado", (string)null);
+                });
+
             modelBuilder.Entity("EconomIA.Domain.Ata", b =>
                 {
                     b.HasOne("EconomIA.Domain.Orgao", "Orgao")
@@ -819,6 +856,18 @@ namespace EconomIA.Adapters.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_unidade_IdentificadorDoOrgao_to_orgao_Id");
+
+                    b.Navigation("Orgao");
+                });
+
+            modelBuilder.Entity("EconomIA.Domain.OrgaoMonitorado", b =>
+                {
+                    b.HasOne("EconomIA.Domain.Orgao", "Orgao")
+                        .WithMany()
+                        .HasForeignKey("IdentificadorDoOrgao")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_orgao_monitorado_identificador_do_orgao_to_orgao_identificador");
 
                     b.Navigation("Orgao");
                 });

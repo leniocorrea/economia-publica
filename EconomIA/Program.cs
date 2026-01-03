@@ -6,10 +6,12 @@ using EconomIA.Adapters.Persistence.Repositories.Atas;
 using EconomIA.Adapters.Persistence.Repositories.Contratos;
 using EconomIA.Adapters.Persistence.Repositories.ItensDaCompra;
 using EconomIA.Adapters.Persistence.Repositories.Orgaos;
+using EconomIA.Adapters.Persistence.Repositories.OrgaosMonitorados;
 using EconomIA.Application.Queries.ListOrgaos;
 using EconomIA.Domain.Repositories;
 using EconomIA.Endpoints.ItensDaCompra;
 using EconomIA.Endpoints.Orgaos;
+using EconomIA.Endpoints.OrgaosMonitorados;
 using Elastic.Clients.Elasticsearch;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http.Json;
@@ -50,6 +52,8 @@ builder.Services.AddScoped<IItensDaCompraReader, ItensDaCompraQueryRepository>()
 builder.Services.AddScoped<IItensDaCompraSearcher, ElasticsearchItemSearcher>();
 builder.Services.AddScoped<IAtasReader, AtasQueryRepository>();
 builder.Services.AddScoped<IContratosReader, ContratosQueryRepository>();
+builder.Services.AddScoped<IOrgaosMonitoradosReader, OrgaosMonitoradosQueryRepository>();
+builder.Services.AddScoped<IOrgaosMonitorados, OrgaosMonitoradosCommandRepository>();
 
 var app = builder.Build();
 
@@ -74,8 +78,9 @@ using (var scope = app.Services.CreateScope()) {
 	}
 }
 
-app.MapGet("/", () => "EconomIA API v1.0.4");
+app.MapGet("/", () => "EconomIA API v1.0.5");
 app.MapOrgaosEndpoints();
 app.MapItensDaCompraEndpoints();
+app.MapOrgaosMonitoradosEndpoints();
 
 app.Run();

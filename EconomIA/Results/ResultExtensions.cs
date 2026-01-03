@@ -14,17 +14,28 @@ namespace EconomIA.Results;
 public static class ResultExtensions {
 	private static readonly Dictionary<EconomIAErrorCodes, Func<HandlerResultError, HttpResult>> ErrorCodeMappings = new() {
 		[OrgaoNotFound] = NotFound,
+		[OrgaoMonitoradoNotFound] = NotFound,
 
 		[MultipleOrgaosFound] = Conflict,
+		[OrgaoMonitoradoAlreadyExists] = Conflict,
 
 		[ArgumentNotProvided] = BadRequest,
 		[InvalidArgument] = BadRequest,
 		[InvalidOrgaoRequest] = BadRequest,
+		[InvalidOrgaoMonitoradoRequest] = BadRequest,
 		[OtherError] = BadRequest,
 	};
 
 	public static HttpResult ToOk<TResponse, TResult>(this Result<TResponse, HandlerResultError> result, Func<TResponse, TResult> mapper) {
 		return result.IsSuccess ? TypedResults.Ok(mapper(result.Value)) : MapErrorToResponse(result.Error);
+	}
+
+	public static HttpResult ToCreated(this UnitResult<HandlerResultError> result, String location) {
+		return result.IsSuccess ? TypedResults.Created(location) : MapErrorToResponse(result.Error);
+	}
+
+	public static HttpResult ToNoContent(this UnitResult<HandlerResultError> result) {
+		return result.IsSuccess ? TypedResults.NoContent() : MapErrorToResponse(result.Error);
 	}
 
 	public static HttpResult ToErrorResponse<TResponse>(this Result<TResponse, HandlerResultError> result) {

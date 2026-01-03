@@ -4,17 +4,17 @@ using EconomIA.CargaDeDados.Repositories;
 namespace EconomIA.CargaDeDados.Services;
 
 public class ServicoOrquestradorImportacao {
-	private readonly Orgaos orgaos;
+	private readonly OrgaosMonitorados orgaosMonitorados;
 	private readonly ControlesImportacao controlesImportacao;
 	private readonly ServicoCarga servicoCarga;
 	private readonly ServicoCargaContratosAtas servicoCargaContratosAtas;
 
 	public ServicoOrquestradorImportacao(
-		Orgaos orgaos,
+		OrgaosMonitorados orgaosMonitorados,
 		ControlesImportacao controlesImportacao,
 		ServicoCarga servicoCarga,
 		ServicoCargaContratosAtas servicoCargaContratosAtas) {
-		this.orgaos = orgaos;
+		this.orgaosMonitorados = orgaosMonitorados;
 		this.controlesImportacao = controlesImportacao;
 		this.servicoCarga = servicoCarga;
 		this.servicoCargaContratosAtas = servicoCargaContratosAtas;
@@ -27,15 +27,16 @@ public class ServicoOrquestradorImportacao {
 		Console.WriteLine();
 
 		var orgaosParaImportar = cnpjsFiltro is not null && cnpjsFiltro.Length > 0
-			? await orgaos.ListarPorCnpjsAsync(cnpjsFiltro)
-			: await orgaos.ListarTodosAsync();
+			? await orgaosMonitorados.ListarPorCnpjsAsync(cnpjsFiltro)
+			: await orgaosMonitorados.ListarAtivosAsync();
 
 		if (orgaosParaImportar.Count == 0) {
-			Console.WriteLine("Nenhum orgao encontrado para importacao.");
+			Console.WriteLine("Nenhum orgao monitorado encontrado para importacao.");
+			Console.WriteLine("Use a API /v1/orgaos-monitorados/{cnpj} para ativar o monitoramento de orgaos.");
 			return;
 		}
 
-		Console.WriteLine($"Total de orgaos a processar: {orgaosParaImportar.Count}");
+		Console.WriteLine($"Total de orgaos monitorados a processar: {orgaosParaImportar.Count}");
 		Console.WriteLine();
 
 		var dataFinal = DateTime.Now;
@@ -60,15 +61,16 @@ public class ServicoOrquestradorImportacao {
 		Console.WriteLine();
 
 		var orgaosParaImportar = cnpjsFiltro is not null && cnpjsFiltro.Length > 0
-			? await orgaos.ListarPorCnpjsAsync(cnpjsFiltro)
-			: await orgaos.ListarTodosAsync();
+			? await orgaosMonitorados.ListarPorCnpjsAsync(cnpjsFiltro)
+			: await orgaosMonitorados.ListarAtivosAsync();
 
 		if (orgaosParaImportar.Count == 0) {
-			Console.WriteLine("Nenhum orgao encontrado para importacao.");
+			Console.WriteLine("Nenhum orgao monitorado encontrado para importacao.");
+			Console.WriteLine("Use a API /v1/orgaos-monitorados/{cnpj} para ativar o monitoramento de orgaos.");
 			return;
 		}
 
-		Console.WriteLine($"Total de orgaos a processar: {orgaosParaImportar.Count}");
+		Console.WriteLine($"Total de orgaos monitorados a processar: {orgaosParaImportar.Count}");
 		Console.WriteLine();
 
 		var dataFinal = DateTime.Now;
@@ -218,12 +220,12 @@ public class ServicoOrquestradorImportacao {
 	}
 
 	public async Task ExibirStatusImportacaoAsync(String[]? cnpjsFiltro = null) {
-		Console.WriteLine("=== Status de Importacao ===");
+		Console.WriteLine("=== Status de Importacao (Orgaos Monitorados) ===");
 		Console.WriteLine();
 
 		var orgaosParaExibir = cnpjsFiltro is not null && cnpjsFiltro.Length > 0
-			? await orgaos.ListarPorCnpjsAsync(cnpjsFiltro)
-			: await orgaos.ListarTodosAsync();
+			? await orgaosMonitorados.ListarPorCnpjsAsync(cnpjsFiltro)
+			: await orgaosMonitorados.ListarAtivosAsync();
 
 		foreach (var orgao in orgaosParaExibir) {
 			Console.WriteLine($"{orgao.RazaoSocial} ({orgao.Cnpj}):");

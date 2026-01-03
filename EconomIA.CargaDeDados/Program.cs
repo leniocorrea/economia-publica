@@ -39,6 +39,7 @@ public class Program {
 				}));
 
 		construtor.Services.AddTransient<Orgaos>();
+		construtor.Services.AddTransient<OrgaosMonitorados>();
 		construtor.Services.AddTransient<Unidades>();
 		construtor.Services.AddTransient<Compras>();
 		construtor.Services.AddTransient<ItensDaCompra>();
@@ -158,13 +159,17 @@ Uso: dotnet run [comando] [opcoes]
 
 Comandos:
   orgaos       Carrega todos os orgaos e unidades do PNCP (~98k orgaos)
-  diaria       Executa importacao diaria (padrao)
-  incremental  Executa importacao incremental baseada no controle
-  status       Exibe status de importacao dos orgaos
+  diaria       Executa importacao diaria de orgaos monitorados (padrao)
+  incremental  Executa importacao incremental de orgaos monitorados
+  status       Exibe status de importacao dos orgaos monitorados
 
 Opcoes:
-  --cnpjs, -c <cnpjs>   Lista de CNPJs separados por virgula
+  --cnpjs, -c <cnpjs>   Lista de CNPJs separados por virgula (filtra entre monitorados)
   --dias, -d <dias>     Dias retroativos para importacao diaria (padrao: 1)
+
+Nota: As importacoes (diaria, incremental) processam apenas orgaos monitorados.
+      Use a API /v1/orgaos-monitorados/{cnpj} para ativar/desativar monitoramento.
+      Primeira carga: ultimos 90 dias. Cargas subsequentes: incrementais.
 
 Exemplos:
   dotnet run orgaos

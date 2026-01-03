@@ -31,6 +31,15 @@ public enum EconomIAErrorCodes {
 
 	[Description("Invalid item request.")]
 	InvalidItemRequest,
+
+	[Description("Órgão monitorado not found.")]
+	OrgaoMonitoradoNotFound,
+
+	[Description("Órgão monitorado already exists.")]
+	OrgaoMonitoradoAlreadyExists,
+
+	[Description("Invalid órgão monitorado request.")]
+	InvalidOrgaoMonitoradoRequest,
 }
 
 public static class EconomIAErrorCodesExtensions {

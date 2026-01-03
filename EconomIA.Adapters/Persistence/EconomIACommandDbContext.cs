@@ -13,6 +13,7 @@ public class EconomIACommandDbContext(DbContextOptions<EconomIACommandDbContext>
 	public DbSet<ResultadoDoItem> ResultadosDoItem { get; set; } = null!;
 	public DbSet<Ata> Atas { get; set; } = null!;
 	public DbSet<Contrato> Contratos { get; set; } = null!;
+	public DbSet<OrgaoMonitorado> OrgaosMonitorados { get; set; } = null!;
 
 	protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) {
 		base.OnConfiguring(optionsBuilder);

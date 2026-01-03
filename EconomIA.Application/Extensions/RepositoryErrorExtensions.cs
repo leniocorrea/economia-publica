@@ -23,4 +23,11 @@ public static class RepositoryErrorExtensions {
 			_ => new EconomIAApplicationError(InvalidItemRequest, error.Message),
 		};
 	}
+
+	public static HandlerResultError ToOrgaoMonitoradoError(this RepositoryError error) {
+		return error.Code switch {
+			NotFound => new EconomIAApplicationError(OrgaoMonitoradoNotFound, error.Message),
+			_ => new EconomIAApplicationError(InvalidOrgaoMonitoradoRequest, error.Message),
+		};
+	}
 }
