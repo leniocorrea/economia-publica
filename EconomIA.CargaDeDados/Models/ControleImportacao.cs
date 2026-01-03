@@ -14,10 +14,10 @@ public class ControleImportacao {
 	public string TipoDado { get; set; } = string.Empty;
 
 	[Column("data_inicial_importada")]
-	public DateTime? DataInicialImportada { get; set; }
+	public DateOnly? DataInicialImportada { get; set; }
 
 	[Column("data_final_importada")]
-	public DateTime? DataFinalImportada { get; set; }
+	public DateOnly? DataFinalImportada { get; set; }
 
 	[Column("ultima_execucao")]
 	public DateTime UltimaExecucao { get; set; }

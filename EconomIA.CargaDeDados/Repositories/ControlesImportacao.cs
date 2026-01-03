@@ -142,6 +142,6 @@ public class ControlesImportacao {
 			return null;
 		}
 
-		return controle.DataFinalImportada.Value.AddDays(1);
+		return controle.DataFinalImportada.Value.ToDateTime(TimeOnly.MinValue).AddDays(1);
 	}
 }

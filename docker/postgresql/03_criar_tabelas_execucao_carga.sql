@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS public.execucao_carga (
 
     CONSTRAINT chk_modo_execucao CHECK (modo_execucao IN ('diaria', 'incremental', 'manual', 'orgaos')),
     CONSTRAINT chk_tipo_gatilho CHECK (tipo_gatilho IN ('scheduler', 'cli', 'api')),
-    CONSTRAINT chk_status_execucao CHECK (status IN ('em_andamento', 'sucesso', 'erro', 'cancelado'))
+    CONSTRAINT chk_status_execucao CHECK (status IN ('em_andamento', 'sucesso', 'erro', 'cancelado', 'parcial'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_execucao_carga_status ON public.execucao_carga (status);
@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS public.execucao_carga_orgao (
 
     data_inicial_processada DATE,
     data_final_processada DATE,
+    criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 
     CONSTRAINT chk_status_execucao_orgao CHECK (status IN ('em_andamento', 'sucesso', 'erro'))
 );
