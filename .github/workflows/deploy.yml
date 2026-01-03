@@ -7,7 +7,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/economia-api
 
 jobs:
   test:
@@ -49,11 +48,21 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and Push
+      - name: Build and Push API
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/economia-api:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/economia-api:${{ github.sha }}
+
+      - name: Build and Push Worker
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: EconomIA.CargaDeDados/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/economia-worker:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/economia-worker:${{ github.sha }}
