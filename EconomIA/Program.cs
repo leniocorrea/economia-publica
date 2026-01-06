@@ -8,12 +8,14 @@ using EconomIA.Adapters.Persistence.Repositories.ItensDaCompra;
 using EconomIA.Adapters.Persistence.Repositories.Orgaos;
 using EconomIA.Adapters.Persistence.Repositories.OrgaosMonitorados;
 using EconomIA.Adapters.Persistence.Repositories.ExecucoesCarga;
+using EconomIA.Adapters.Persistence.Repositories.ConfiguracoesCarga;
 using EconomIA.Application.Queries.ListOrgaos;
 using EconomIA.Domain.Repositories;
 using EconomIA.Endpoints.ItensDaCompra;
 using EconomIA.Endpoints.Orgaos;
 using EconomIA.Endpoints.OrgaosMonitorados;
 using EconomIA.Endpoints.Execucoes;
+using EconomIA.Endpoints.Configuracao;
 using Elastic.Clients.Elasticsearch;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http.Json;
@@ -65,6 +67,8 @@ builder.Services.AddScoped<IContratosReader, ContratosQueryRepository>();
 builder.Services.AddScoped<IOrgaosMonitoradosReader, OrgaosMonitoradosQueryRepository>();
 builder.Services.AddScoped<IOrgaosMonitorados, OrgaosMonitoradosCommandRepository>();
 builder.Services.AddScoped<IExecucoesCargaReader, ExecucoesCargaQueryRepository>();
+builder.Services.AddScoped<IConfiguracoesCarga, ConfiguracoesCargaCommandRepository>();
+builder.Services.AddScoped<IConfiguracoesCargaReader, ConfiguracoesCargaQueryRepository>();
 
 var app = builder.Build();
 
@@ -96,5 +100,6 @@ app.MapOrgaosEndpoints();
 app.MapItensDaCompraEndpoints();
 app.MapOrgaosMonitoradosEndpoints();
 app.MapExecucoesEndpoints();
+app.MapConfiguracaoEndpoints();
 
 app.Run();

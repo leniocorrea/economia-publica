@@ -16,6 +16,7 @@ public class EconomIACommandDbContext(DbContextOptions<EconomIACommandDbContext>
 	public DbSet<OrgaoMonitorado> OrgaosMonitorados { get; set; } = null!;
 	public DbSet<ExecucaoCarga> ExecucoesCarga { get; set; } = null!;
 	public DbSet<ExecucaoCargaOrgao> ExecucoesCargaOrgaos { get; set; } = null!;
+	public DbSet<ConfiguracaoCarga> ConfiguracoesCarga { get; set; } = null!;
 
 	protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) {
 		base.OnConfiguring(optionsBuilder);

@@ -15,6 +15,7 @@ public static class ResultExtensions {
 	private static readonly Dictionary<EconomIAErrorCodes, Func<HandlerResultError, HttpResult>> ErrorCodeMappings = new() {
 		[OrgaoNotFound] = NotFound,
 		[OrgaoMonitoradoNotFound] = NotFound,
+		[ConfiguracaoCargaNotFound] = NotFound,
 
 		[MultipleOrgaosFound] = Conflict,
 		[OrgaoMonitoradoAlreadyExists] = Conflict,
@@ -23,6 +24,7 @@ public static class ResultExtensions {
 		[InvalidArgument] = BadRequest,
 		[InvalidOrgaoRequest] = BadRequest,
 		[InvalidOrgaoMonitoradoRequest] = BadRequest,
+		[InvalidConfiguracaoCargaRequest] = BadRequest,
 		[OtherError] = BadRequest,
 	};
 

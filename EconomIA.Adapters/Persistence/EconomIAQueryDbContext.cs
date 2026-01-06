@@ -16,4 +16,5 @@ public class EconomIAQueryDbContext(DbContextOptions<EconomIAQueryDbContext> opt
 	public DbSet<OrgaoMonitorado> OrgaosMonitorados { get; set; } = null!;
 	public DbSet<ExecucaoCarga> ExecucoesCarga { get; set; } = null!;
 	public DbSet<ExecucaoCargaOrgao> ExecucoesCargaOrgaos { get; set; } = null!;
+	public DbSet<ConfiguracaoCarga> ConfiguracoesCarga { get; set; } = null!;
 }

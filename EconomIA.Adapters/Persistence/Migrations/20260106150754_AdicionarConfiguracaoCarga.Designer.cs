@@ -3,6 +3,7 @@ using System;
 using EconomIA.Adapters.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EconomIA.Adapters.Persistence.Migrations
 {
     [DbContext(typeof(EconomIACommandDbContext))]
-    partial class EconomIACommandDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260106150754_AdicionarConfiguracaoCarga")]
+    partial class AdicionarConfiguracaoCarga
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
