@@ -27,7 +27,8 @@ namespace EconomIA.Adapters.Persistence.Migrations
             migrationBuilder.Sql(@"
                 ALTER TABLE execucao_carga DROP CONSTRAINT IF EXISTS chk_status_execucao;
                 ALTER TABLE execucao_carga ADD CONSTRAINT chk_status_execucao
-                    CHECK (status IN ('pendente', 'em_andamento', 'sucesso', 'erro', 'cancelado', 'parcial'));
+                    CHECK (status IN ('pendente', 'em_andamento', 'sucesso', 'erro', 'cancelado', 'parcial'))
+                    NOT VALID;
             ");
         }
 
