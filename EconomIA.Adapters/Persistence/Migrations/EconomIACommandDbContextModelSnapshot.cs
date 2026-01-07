@@ -524,7 +524,7 @@ namespace EconomIA.Adapters.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("hostname");
 
-                    b.Property<DateTime>("InicioEm")
+                    b.Property<DateTime?>("InicioEm")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("inicio_em");
 
@@ -536,6 +536,10 @@ namespace EconomIA.Adapters.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("modo_execucao");
+
+                    b.Property<string>("ParametrosJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("parametros");
 
                     b.Property<string>("StackTrace")
                         .HasColumnType("text")
