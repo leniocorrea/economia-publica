@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 namespace EconomIA.CargaDeDados.Services;
 
 public class ServicoOrquestradorImportacao {
-	private const Int32 MaxOrgaosEmParalelo = 5;
+	private const Int32 MaxOrgaosEmParalelo = 2;
 
 	private readonly OrgaosMonitorados orgaosMonitorados;
 	private readonly ControlesImportacao controlesImportacao;
