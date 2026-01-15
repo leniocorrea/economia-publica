@@ -14,7 +14,7 @@ namespace EconomIA.Application.Queries.ListOrgaosMonitorados;
 public static class ListOrgaosMonitorados {
 	public record Query(Boolean? ApenasAtivos, String? Search, String? Order, String? Cursor, Int32? Limit) : IQuery<Response>;
 
-	public record Response(Response.Item[] Items, Boolean HasMoreItems, String? NextCursor) {
+	public record Response(Response.Item[] Items, Boolean HasMoreItems, String? NextCursor, Int64? TotalCount) {
 		public record Item(
 			Int64 Id,
 			Int64 IdentificadorDoOrgao,
@@ -45,7 +45,7 @@ public static class ListOrgaosMonitorados {
 				filter = filter.And(OrgaosMonitoradosSpecifications.ComTermo(query.Search));
 			}
 
-			var result = await orgaosMonitorados.Paginate(pagination, filter, cancellationToken);
+			var result = await orgaosMonitorados.Paginate(pagination, filter, cancellationToken, includeCount: true);
 
 			if (result.IsFailure) {
 				return Failure(result.Error.ToOrgaoMonitoradoError());
@@ -62,7 +62,7 @@ public static class ListOrgaosMonitorados {
 				x.AtualizadoEm
 			)).ToArray();
 
-			return Success(new Response(items, page.HasMoreItems, page.NextCursor));
+			return Success(new Response(items, page.HasMoreItems, page.NextCursor, page.TotalCount));
 		}
 	}
 }

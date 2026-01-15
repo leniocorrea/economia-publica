@@ -36,7 +36,8 @@ public static class ListOrgaosMonitoradosEndpoint {
 	private record Response(
 		Response.Item[] Items,
 		Boolean HasMoreItems,
-		String? NextCursor) {
+		String? NextCursor,
+		Int64? TotalCount) {
 		public static Response From(ListOrgaosMonitorados.Response r) {
 			return new Response(
 				r.Items.Select(x => new Item(
@@ -48,7 +49,8 @@ public static class ListOrgaosMonitoradosEndpoint {
 					x.CriadoEm,
 					x.AtualizadoEm)).ToArray(),
 				r.HasMoreItems,
-				r.NextCursor);
+				r.NextCursor,
+				r.TotalCount);
 		}
 
 		public record Item(

@@ -13,7 +13,7 @@ public interface IReadRepository<TAggregate> where TAggregate : Aggregate {
 	Task<Result<TAggregate, RepositoryError>> Retrieve(Int64 id, CancellationToken cancellationToken = default);
 	Task<Result<TAggregate, RepositoryError>> Find(Specification<TAggregate> filter, CancellationToken cancellationToken = default);
 	Task<Result<ImmutableArray<TAggregate>, RepositoryError>> Filter(Specification<TAggregate> filter, CancellationToken cancellationToken = default);
-	Task<Result<PaginationResult<TAggregate>, RepositoryError>> Paginate(PaginationParameters? page = null, Specification<TAggregate>? filter = null, CancellationToken cancellationToken = default);
+	Task<Result<PaginationResult<TAggregate>, RepositoryError>> Paginate(PaginationParameters? page = null, Specification<TAggregate>? filter = null, CancellationToken cancellationToken = default, Boolean includeCount = false);
 	Task<Boolean> Exists(Specification<TAggregate>? filter = null, CancellationToken cancellationToken = default);
 	Task<Int64> Count(Specification<TAggregate>? filter = null, CancellationToken cancellationToken = default);
 }

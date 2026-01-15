@@ -61,13 +61,19 @@ public abstract class ReadRepository<TAggregate> : IReadRepository<TAggregate> w
 		return items.ToImmutableArray();
 	}
 
-	public async Task<Result<PaginationResult<TAggregate>, RepositoryError>> Paginate(PaginationParameters? page = null, Specification<TAggregate>? filter = null, CancellationToken cancellationToken = default) {
+	public async Task<Result<PaginationResult<TAggregate>, RepositoryError>> Paginate(PaginationParameters? page = null, Specification<TAggregate>? filter = null, CancellationToken cancellationToken = default, Boolean includeCount = false) {
 		page ??= PaginationParameters.Create().Value;
 		filter ??= Specification<TAggregate>.True;
 
 		await using var scope = await CreateScope(cancellationToken);
 		var query = await scope.Query();
 		query = query.Where(filter.Rule());
+
+		Int64? totalCount = null;
+
+		if (includeCount) {
+			totalCount = await Count(query, cancellationToken);
+		}
 
 		var isDescending = page.Order?.StartsWith("-") == true;
 
@@ -92,7 +98,7 @@ public abstract class ReadRepository<TAggregate> : IReadRepository<TAggregate> w
 			nextCursor = Convert.ToBase64String(BitConverter.GetBytes(lastId));
 		}
 
-		return new PaginationResult<TAggregate>(resultItems, nextCursor);
+		return new PaginationResult<TAggregate>(resultItems, nextCursor, totalCount);
 	}
 
 	public async Task<Boolean> Exists(Specification<TAggregate>? filter = null, CancellationToken cancellationToken = default) {
