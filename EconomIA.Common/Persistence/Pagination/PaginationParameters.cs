@@ -19,11 +19,7 @@ public sealed class PaginationParameters {
 			return Failure<PaginationParameters>($"Limit cannot be greater than {MaxLimit}.");
 		}
 
-		if (!String.IsNullOrWhiteSpace(order) && !String.IsNullOrWhiteSpace(cursor)) {
-			return Failure<PaginationParameters>("Only one of order or cursor parameters can be provided.");
-		}
-
-		if (String.IsNullOrWhiteSpace(order) && String.IsNullOrWhiteSpace(cursor)) {
+		if (String.IsNullOrWhiteSpace(order)) {
 			order = $"+{nameof(Aggregate.Id)}";
 		}
 

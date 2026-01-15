@@ -68,11 +68,18 @@ public abstract class ReadRepository<TAggregate> : IReadRepository<TAggregate> w
 		await using var scope = await CreateScope(cancellationToken);
 		var query = await scope.Query();
 		query = query.Where(filter.Rule());
-		query = query.OrderBy(x => x.Id);
+
+		var isDescending = page.Order?.StartsWith("-") == true;
+
+		query = isDescending
+			? query.OrderByDescending(x => x.Id)
+			: query.OrderBy(x => x.Id);
 
 		if (!String.IsNullOrWhiteSpace(page.Cursor)) {
 			var cursorId = BitConverter.ToInt64(Convert.FromBase64String(page.Cursor));
-			query = query.Where(x => x.Id > cursorId);
+			query = isDescending
+				? query.Where(x => x.Id < cursorId)
+				: query.Where(x => x.Id > cursorId);
 		}
 
 		var items = await List(query.Take(page.Limit + 1), cancellationToken);
