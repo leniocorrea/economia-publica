@@ -18,7 +18,7 @@ public class ServicoCargaContratosAtas {
 		this.atas = atas;
 	}
 
-	public async Task CarregarContratosAsync(String[] cnpjs, String dataInicial, String dataFinal) {
+	public async Task<Int32> CarregarContratosAsync(String[] cnpjs, String dataInicial, String dataFinal) {
 		Console.WriteLine("=== Carga de Contratos do PNCP ===");
 
 		var totalContratos = 0;
@@ -104,9 +104,11 @@ public class ServicoCargaContratosAtas {
 		}
 
 		Console.WriteLine($"=== Total: {totalContratos} contratos importados ===");
+
+		return totalContratos;
 	}
 
-	public async Task CarregarAtasAsync(String[] cnpjs, String dataInicial, String dataFinal) {
+	public async Task<Int32> CarregarAtasAsync(String[] cnpjs, String dataInicial, String dataFinal) {
 		Console.WriteLine("=== Carga de Atas de Registro de Preco do PNCP ===");
 
 		var totalAtas = 0;
@@ -184,6 +186,8 @@ public class ServicoCargaContratosAtas {
 		}
 
 		Console.WriteLine($"=== Total: {totalAtas} atas importadas ===");
+
+		return totalAtas;
 	}
 
 	private async Task<Int64> ObterOuCriarOrgaoAsync(PncpOrgaoDto orgaoDto) {

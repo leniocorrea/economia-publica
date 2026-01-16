@@ -133,18 +133,19 @@ public class ServicoOrquestradorImportacao {
 				parametros.Add(new ParametroCarga(dataInicialStr, dataFinalStr, modalidade, orgao.Cnpj, 50));
 			}
 
-			await servicos.ServicoCarga.ProcessarCargaAsync(parametros);
+			var resultado = await servicos.ServicoCarga.ProcessarCargaAsync(parametros);
 
 			await servicos.ControlesImportacao.FinalizarComSucessoAsync(
 				orgao.Identificador,
 				tipoDado,
 				dataInicial,
 				dataFinal,
-				parametros.Count);
+				resultado.ComprasProcessadas);
 
 			cronometro.Stop();
 			metricaOrgao.ComprasDuracaoMs = cronometro.ElapsedMilliseconds;
-			metricaOrgao.ComprasProcessadas++;
+			metricaOrgao.ComprasProcessadas += resultado.ComprasProcessadas;
+			metricaOrgao.ItensProcessados += resultado.ItensIndexados;
 
 			logger.LogDebug("Compras importadas para {Cnpj}: {DataInicial:dd/MM/yyyy} a {DataFinal:dd/MM/yyyy} em {Duracao}ms",
 				orgao.Cnpj, dataInicial, dataFinal, cronometro.ElapsedMilliseconds);
@@ -184,18 +185,18 @@ public class ServicoOrquestradorImportacao {
 			var dataInicialStr = dataInicial.ToString("yyyyMMdd");
 			var dataFinalStr = dataFinal.ToString("yyyyMMdd");
 
-			await servicos.ServicoCargaContratosAtas.CarregarContratosAsync(new[] { orgao.Cnpj }, dataInicialStr, dataFinalStr);
+			var totalContratos = await servicos.ServicoCargaContratosAtas.CarregarContratosAsync(new[] { orgao.Cnpj }, dataInicialStr, dataFinalStr);
 
 			await servicos.ControlesImportacao.FinalizarComSucessoAsync(
 				orgao.Identificador,
 				tipoDado,
 				dataInicial,
 				dataFinal,
-				0);
+				totalContratos);
 
 			cronometro.Stop();
 			metricaOrgao.ContratosDuracaoMs = cronometro.ElapsedMilliseconds;
-			metricaOrgao.ContratosProcessados++;
+			metricaOrgao.ContratosProcessados += totalContratos;
 
 			logger.LogDebug("Contratos importados para {Cnpj}: {DataInicial:dd/MM/yyyy} a {DataFinal:dd/MM/yyyy} em {Duracao}ms",
 				orgao.Cnpj, dataInicial, dataFinal, cronometro.ElapsedMilliseconds);
@@ -234,18 +235,18 @@ public class ServicoOrquestradorImportacao {
 			var dataInicialStr = dataInicial.ToString("yyyyMMdd");
 			var dataFinalStr = dataFinal.ToString("yyyyMMdd");
 
-			await servicos.ServicoCargaContratosAtas.CarregarAtasAsync(new[] { orgao.Cnpj }, dataInicialStr, dataFinalStr);
+			var totalAtas = await servicos.ServicoCargaContratosAtas.CarregarAtasAsync(new[] { orgao.Cnpj }, dataInicialStr, dataFinalStr);
 
 			await servicos.ControlesImportacao.FinalizarComSucessoAsync(
 				orgao.Identificador,
 				tipoDado,
 				dataInicial,
 				dataFinal,
-				0);
+				totalAtas);
 
 			cronometro.Stop();
 			metricaOrgao.AtasDuracaoMs = cronometro.ElapsedMilliseconds;
-			metricaOrgao.AtasProcessadas++;
+			metricaOrgao.AtasProcessadas += totalAtas;
 
 			logger.LogDebug("Atas importadas para {Cnpj}: {DataInicial:dd/MM/yyyy} a {DataFinal:dd/MM/yyyy} em {Duracao}ms",
 				orgao.Cnpj, dataInicial, dataFinal, cronometro.ElapsedMilliseconds);

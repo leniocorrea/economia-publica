@@ -9,6 +9,8 @@ namespace EconomIA.CargaDeDados.Services;
 
 public record ParametroCarga(String DataInicial, String DataFinal, Int32 CodigoModalidadeContratacao, String? Cnpj, Int32 TamanhoPagina);
 
+public record ResultadoCarga(Int32 ComprasProcessadas, Int32 ItensIndexados);
+
 public class ServicoCarga {
 	private readonly HttpClient httpClient;
 	private readonly Elastic.Clients.Elasticsearch.ElasticsearchClient elasticClient;
@@ -23,8 +25,10 @@ public class ServicoCarga {
 		this.scopeFactory = scopeFactory;
 	}
 
-	public async Task ProcessarCargaAsync(List<ParametroCarga> parametros) {
+	public async Task<ResultadoCarga> ProcessarCargaAsync(List<ParametroCarga> parametros) {
 		var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = 4 };
+		var totalCompras = 0;
+		var totalItensIndexados = 0;
 
 		foreach (var param in parametros) {
 			try {
@@ -98,6 +102,7 @@ public class ServicoCarga {
 							};
 
 							var idCompra = await compras.UpsertAsync(modeloCompra);
+							Interlocked.Increment(ref totalCompras);
 
 							try {
 								var urlItens = $"https://pncp.gov.br/api/pncp/v1/orgaos/{item.OrgaoEntidade.Cnpj}/compras/{item.AnoCompra}/{item.SequencialCompra}/itens";
@@ -130,6 +135,7 @@ public class ServicoCarga {
 												UfSigla = item.UnidadeOrgao?.UfSigla
 											};
 											await elasticClient.IndexAsync(doc, token);
+											Interlocked.Increment(ref totalItensIndexados);
 										} catch (Exception ex) {
 											Console.WriteLine($"Erro ao indexar item {itemDto.NumeroItem} no Elastic: {ex.Message}");
 										}
@@ -178,5 +184,7 @@ public class ServicoCarga {
 				Console.WriteLine($"Erro ao processar CNPJ {param.Cnpj}: {ex.Message}");
 			}
 		}
+
+		return new ResultadoCarga(totalCompras, totalItensIndexados);
 	}
 }
