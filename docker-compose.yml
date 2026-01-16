@@ -110,6 +110,7 @@ services:
       - Worker__SincronizarOrgaos=${WORKER__SINCRONIZAR_ORGAOS:-true}
       - Sentry__Enabled=${SENTRY__ENABLED:-false}
       - Sentry__Dsn=${SENTRY__DSN:-}
+      - Api__BaseUrl=http://economia-api:8080
     command: ["worker"]
     depends_on:
       economia-postgresql:
