@@ -517,59 +517,80 @@ public class ServicoCargaBrasil {
 		String dataFinal,
 		CancellationToken cancellationToken) {
 
-		logger.LogInformation("Processando atas de todo o Brasil");
+		logger.LogInformation("Processando atas de todo o Brasil (otimizado)");
 
 		var totalAtas = 0;
-		var pagina = 1;
+		var paginaAtual = 1;
+		var totalPaginas = Int32.MaxValue;
+		var cacheOrgaos = new ConcurrentDictionary<String, Int64>();
 
-		while (!cancellationToken.IsCancellationRequested) {
-			using var lease = await rateLimiter.AcquireAsync(1, cancellationToken);
+		using var scope = scopeFactory.CreateScope();
+		var orgaosRepo = scope.ServiceProvider.GetRequiredService<Orgaos>();
+		var mapaOrgaos = await orgaosRepo.ObterMapaCnpjIdentificadorAsync();
 
-			if (!lease.IsAcquired) {
-				await Task.Delay(100, cancellationToken);
-				continue;
-			}
+		foreach (var kvp in mapaOrgaos) {
+			cacheOrgaos[kvp.Key] = kvp.Value;
+		}
 
-			try {
-				var url = $"https://pncp.gov.br/api/consulta/v1/atas?dataInicial={dataInicial}&dataFinal={dataFinal}&pagina={pagina}";
-				var response = await httpClient.GetAsync(url, cancellationToken);
+		logger.LogInformation("Cache de orgaos carregado: {Count} orgaos", cacheOrgaos.Count);
 
-				if (response.StatusCode == System.Net.HttpStatusCode.NoContent) {
-					break;
+		while (paginaAtual <= totalPaginas && !cancellationToken.IsCancellationRequested) {
+			var paginasParaBuscar = Enumerable.Range(paginaAtual, Math.Min(8, totalPaginas - paginaAtual + 1)).ToList();
+
+			var tarefas = paginasParaBuscar.Select(async pagina => {
+				using var lease = await rateLimiter.AcquireAsync(1, cancellationToken);
+
+				if (!lease.IsAcquired) {
+					await Task.Delay(100, cancellationToken);
 				}
 
-				if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests) {
-					logger.LogWarning("Rate limit atingido em atas, pagina {Pagina}. Aguardando...", pagina);
-					await Task.Delay(2000, cancellationToken);
+				try {
+					var url = $"https://pncp.gov.br/api/consulta/v1/atas?dataInicial={dataInicial}&dataFinal={dataFinal}&pagina={pagina}";
+					var response = await httpClient.GetAsync(url, cancellationToken);
+
+					if (response.StatusCode == System.Net.HttpStatusCode.NoContent) {
+						return (Pagina: pagina, Resultado: (PncpAtasResponse?)null, Sucesso: true);
+					}
+
+					if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests) {
+						await Task.Delay(2000, cancellationToken);
+						response = await httpClient.GetAsync(url, cancellationToken);
+					}
+
+					if (!response.IsSuccessStatusCode) {
+						return (Pagina: pagina, Resultado: (PncpAtasResponse?)null, Sucesso: false);
+					}
+
+					var resultado = await response.Content.ReadFromJsonAsync<PncpAtasResponse>(cancellationToken: cancellationToken);
+					return (Pagina: pagina, Resultado: resultado, Sucesso: true);
+				} catch (Exception ex) {
+					logger.LogWarning(ex, "Erro ao buscar atas pagina {Pagina}", pagina);
+					return (Pagina: pagina, Resultado: (PncpAtasResponse?)null, Sucesso: false);
+				}
+			});
+
+			var resultados = await Task.WhenAll(tarefas);
+
+			foreach (var (pagina, resultado, sucesso) in resultados.OrderBy(r => r.Pagina)) {
+				if (resultado?.Data is null || resultado.Data.Count == 0) {
 					continue;
 				}
 
-				if (!response.IsSuccessStatusCode) {
-					logger.LogWarning("Erro {StatusCode} em atas, pagina {Pagina}", response.StatusCode, pagina);
-					break;
+				if (pagina == paginaAtual && resultado.TotalPaginas > 0) {
+					totalPaginas = resultado.TotalPaginas;
 				}
 
-				var resultado = await response.Content.ReadFromJsonAsync<PncpAtasResponse>(cancellationToken: cancellationToken);
+				var atasProcessadas = await ProcessarLoteDeAtasComCacheAsync(resultado.Data, cacheOrgaos, cancellationToken);
+				Interlocked.Add(ref totalAtas, atasProcessadas);
+			}
 
-				if (resultado?.Data is null || resultado.Data.Count == 0) {
-					break;
-				}
+			paginaAtual += paginasParaBuscar.Count;
 
-				var atasProcessadas = await ProcessarLoteDeAtasAsync(resultado.Data, cancellationToken);
-				totalAtas += atasProcessadas;
+			if (paginaAtual % 50 == 0) {
+				logger.LogInformation("Atas: pagina {Pagina}/{Total}, processadas: {Processadas}", paginaAtual, totalPaginas, totalAtas);
+			}
 
-				if (resultado.PaginasRestantes == 0) {
-					break;
-				}
-
-				pagina++;
-
-				if (pagina % 10 == 0) {
-					logger.LogDebug("Atas: pagina {Pagina}, total: {Total}", pagina, totalAtas);
-				}
-
-			} catch (Exception ex) {
-				logger.LogError(ex, "Erro ao processar atas, pagina {Pagina}", pagina);
+			if (resultados.All(r => r.Resultado?.Data is null || r.Resultado.Data.Count == 0)) {
 				break;
 			}
 		}
@@ -578,8 +599,9 @@ public class ServicoCargaBrasil {
 		return totalAtas;
 	}
 
-	private async Task<Int32> ProcessarLoteDeAtasAsync(
+	private async Task<Int32> ProcessarLoteDeAtasComCacheAsync(
 		List<PncpAtaDto> atas,
+		ConcurrentDictionary<String, Int64> cacheOrgaos,
 		CancellationToken cancellationToken) {
 
 		using var scope = scopeFactory.CreateScope();
@@ -590,12 +612,11 @@ public class ServicoCargaBrasil {
 
 		foreach (var ataDto in atas) {
 			try {
-				var modeloOrgao = new Orgao {
-					Cnpj = ataDto.CnpjOrgao,
-					RazaoSocial = ataDto.NomeOrgao ?? ""
-				};
-
-				var idOrgao = await orgaosRepo.UpsertAsync(modeloOrgao);
+				var idOrgao = await ObterOuCriarOrgaoComCacheAsync(
+					ataDto.CnpjOrgao,
+					ataDto.NomeOrgao ?? "",
+					cacheOrgaos,
+					orgaosRepo);
 
 				var ata = new Ata {
 					IdentificadorDoOrgao = idOrgao,
@@ -624,5 +645,25 @@ public class ServicoCargaBrasil {
 		}
 
 		return processadas;
+	}
+
+	private async Task<Int64> ObterOuCriarOrgaoComCacheAsync(
+		String cnpj,
+		String razaoSocial,
+		ConcurrentDictionary<String, Int64> cache,
+		Orgaos orgaosRepo) {
+
+		if (cache.TryGetValue(cnpj, out var idExistente)) {
+			return idExistente;
+		}
+
+		var modeloOrgao = new Orgao {
+			Cnpj = cnpj,
+			RazaoSocial = razaoSocial
+		};
+
+		var idOrgao = await orgaosRepo.UpsertAsync(modeloOrgao);
+		cache[cnpj] = idOrgao;
+		return idOrgao;
 	}
 }

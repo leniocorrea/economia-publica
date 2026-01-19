@@ -28,6 +28,22 @@
 4. Pipeline de CI/CD faz o deploy automático
 5. Verificar logs e funcionamento em produção
 
+## Build e Testes - IMPORTANTE
+
+**NUNCA executar build ou testes diretamente no host.** O projeto usa .NET 10 que não está instalado localmente.
+
+**SEMPRE usar Docker para build e testes:**
+```bash
+# Build
+docker run --rm -v $(pwd):/app -w /app mcr.microsoft.com/dotnet/sdk:10.0-preview dotnet build
+
+# Testes
+docker run --rm -v $(pwd):/app -w /app mcr.microsoft.com/dotnet/sdk:10.0-preview dotnet test
+
+# Build de projeto específico
+docker run --rm -v $(pwd):/app -w /app mcr.microsoft.com/dotnet/sdk:10.0-preview dotnet build EconomIA.CargaDeDados/EconomIA.CargaDeDados.csproj
+```
+
 ## Estrutura do Projeto
 
 - `EconomIA/` - API REST principal
