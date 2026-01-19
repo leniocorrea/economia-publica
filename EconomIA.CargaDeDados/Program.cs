@@ -149,6 +149,58 @@ public class Program {
 					await orquestradorStatus.ExibirStatusImportacaoAsync(cnpjsFiltro);
 					break;
 
+				case "brasil":
+					var execucaoAtivaBrasil = await execucoesCarga.ObterExecucaoEmAndamentoAsync();
+
+					if (execucaoAtivaBrasil is not null) {
+						logger.LogError(
+							"Execucao em andamento detectada (ID: {ExecucaoId}, Modo: {Modo}, Inicio: {Inicio}). Aguarde a finalizacao antes de iniciar nova carga.",
+							execucaoAtivaBrasil.Identificador,
+							execucaoAtivaBrasil.ModoExecucao,
+							execucaoAtivaBrasil.InicioEm);
+						return;
+					}
+
+					var metricsBrasil = new MetricasExecucao();
+					var execucaoBrasil = await execucoesCarga.IniciarExecucaoAsync(ModoExecucao.Brasil, TipoGatilho.Cli);
+
+					try {
+						var servicoBrasil = servicos.GetRequiredService<ServicoCargaBrasil>();
+						var dataFinalBrasil = DateTime.Now;
+						var dataInicialBrasil = dataFinalBrasil.AddDays(-diasRetroativos);
+						var apenasModalidadesComDados = !args.Any(a => a.ToLower() == "--todas-modalidades");
+
+						logger.LogInformation(
+							"Carga Brasil: {DataInicial:dd/MM/yyyy} a {DataFinal:dd/MM/yyyy}, Modalidades: {Modalidades}",
+							dataInicialBrasil,
+							dataFinalBrasil,
+							apenasModalidadesComDados ? "apenas com dados (6,8,9,12)" : "todas (1-14)");
+
+						var resultadoBrasil = await servicoBrasil.ProcessarCargaCompletaAsync(
+							dataInicialBrasil,
+							dataFinalBrasil,
+							apenasModalidadesComDados);
+
+						metricsBrasil.TotalComprasProcessadas = resultadoBrasil.ComprasProcessadas;
+						metricsBrasil.TotalItensIndexados = resultadoBrasil.ItensIndexados;
+						metricsBrasil.TotalContratosProcessados = resultadoBrasil.ContratosProcessados;
+						metricsBrasil.TotalAtasProcessadas = resultadoBrasil.AtasProcessadas;
+
+						await execucoesCarga.FinalizarComSucessoAsync(execucaoBrasil.Identificador, metricsBrasil);
+
+						logger.LogInformation(
+							"Carga Brasil finalizada. Compras: {Compras}, Itens: {Itens}, Contratos: {Contratos}, Atas: {Atas}, Duracao: {Duracao}ms",
+							resultadoBrasil.ComprasProcessadas,
+							resultadoBrasil.ItensIndexados,
+							resultadoBrasil.ContratosProcessados,
+							resultadoBrasil.AtasProcessadas,
+							resultadoBrasil.DuracaoMs);
+					} catch (Exception ex) {
+						await execucoesCarga.FinalizarComErroAsync(execucaoBrasil.Identificador, ex.Message, ex.StackTrace, metricsBrasil);
+						throw;
+					}
+					break;
+
 				case "help":
 				case "--help":
 				case "-h":
@@ -228,6 +280,18 @@ public class Program {
 
 		services.AddTransient<ServicoOrquestradorImportacao>();
 
+		services.AddHttpClient<ServicoCargaBrasil>(client => {
+				client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+				client.DefaultRequestHeaders.Add("Accept", "application/json");
+			})
+			.AddTransientHttpErrorPolicy(builder => builder
+				.OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+				.WaitAndRetryAsync(new[] {
+					TimeSpan.FromSeconds(2),
+					TimeSpan.FromSeconds(5),
+					TimeSpan.FromSeconds(10)
+				}));
+
 		var apiBaseUrl = configuration["Api:BaseUrl"];
 
 		if (!String.IsNullOrEmpty(apiBaseUrl)) {
@@ -270,11 +334,19 @@ Comandos:
   orgaos       Carrega todos os orgaos e unidades do PNCP (~98k orgaos)
   diaria       Executa importacao diaria de orgaos monitorados
   incremental  Executa importacao incremental de orgaos monitorados
+  brasil       Executa importacao de todo o Brasil (sem filtro de CNPJ)
   status       Exibe status de importacao dos orgaos monitorados
 
 Opcoes:
-  --cnpjs, -c <cnpjs>   Lista de CNPJs separados por virgula (filtra entre monitorados)
-  --dias, -d <dias>     Dias retroativos para importacao diaria (padrao: 1)
+  --cnpjs, -c <cnpjs>         Lista de CNPJs separados por virgula (filtra entre monitorados)
+  --dias, -d <dias>           Dias retroativos para importacao (padrao: 1)
+  --todas-modalidades         Processa todas as 14 modalidades (padrao: apenas 6,8,9,12)
+
+Modo Brasil:
+  - Busca dados de todo o Brasil sem filtrar por CNPJ
+  - Rate limit de 70 requisicoes/segundo para evitar bloqueio
+  - Por padrao processa apenas modalidades com dados (6, 8, 9, 12)
+  - ~97% mais rapido que processar por orgao individual
 
 Modo Worker:
   - Executa carga incremental automaticamente no horario configurado
@@ -290,6 +362,8 @@ Exemplos:
   dotnet run orgaos
   dotnet run diaria --dias 7
   dotnet run diaria --cnpjs 17695032000151,18296681000142
+  dotnet run brasil --dias 7
+  dotnet run brasil --dias 30 --todas-modalidades
   dotnet run incremental
   dotnet run status --cnpjs 17695032000151
 ");

@@ -38,6 +38,39 @@
 
 ## Banco de Dados
 
-- PostgreSQL para dados relacionais
+- PostgreSQL para dados relacionais (snake_case para tabelas e colunas)
 - Elasticsearch para busca de itens de compra
 - Migrations via Entity Framework Core
+
+## Convenções de Código
+
+### Idioma
+- Nomeie tudo em português (classes, variáveis, métodos), exceto termos técnicos consagrados
+- Use artigos nos nomes: `InformacaoDaImagem` ao invés de `InformacaoImagem`
+
+### Estilo C#
+- Use `var` ao declarar variáveis
+- Use nomes da CLR: `String`, `Int32`, `Boolean` (não `string`, `int`, `bool`)
+- Use `is not null` ao invés de `!= null`
+- Chaves `{` no fim da linha (estilo Java)
+- Sempre use chaves em estruturas de controle, mesmo em blocos de uma linha
+- Adicione linha em branco antes de estruturas de controle (if, while, for)
+- Não use prefixo `_` em campos privados
+- Evite comentários - código deve ser auto-explanatório
+
+### SQL PostgreSQL
+- Use letras minúsculas com `_` para separar: `itens_do_pedido`, `valor_unitario`
+
+## Princípios
+- SOLID quando fizer sentido
+- Priorize legibilidade e manutenibilidade
+- Prefira simplicidade sobre complexidade
+- Evite over-engineering e abstrações prematuras
+
+## Commits
+- Mensagens de commit devem ser UMA ÚNICA FRASE curta em português
+- Formato: `<tipo>: <descrição em uma frase>`
+- Tipos: feat, fix, refactor, style, test, docs, chore
+- NUNCA usar múltiplas linhas ou bullet points no commit
+- Não adicionar co-autoria ou indicação de geração por IA
+- Sempre aguardar aprovação do usuário antes de executar o commit

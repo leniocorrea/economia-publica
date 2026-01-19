@@ -7,15 +7,35 @@ public class MetricasExecucao {
 	private readonly ConcurrentDictionary<Int64, MetricasOrgao> metricasPorOrgao = new();
 	private readonly Stopwatch cronometro = Stopwatch.StartNew();
 
+	private Int32? totalComprasOverride;
+	private Int32? totalContratosOverride;
+	private Int32? totalAtasOverride;
+	private Int32? totalItensOverride;
+
 	public Int64 DuracaoTotalMs => cronometro.ElapsedMilliseconds;
 
 	public Int32 TotalOrgaosProcessados => metricasPorOrgao.Count;
 	public Int32 TotalOrgaosComErro => metricasPorOrgao.Values.Count(x => x.Status == "erro");
 
-	public Int32 TotalComprasProcessadas => metricasPorOrgao.Values.Sum(x => x.ComprasProcessadas);
-	public Int32 TotalContratosProcessados => metricasPorOrgao.Values.Sum(x => x.ContratosProcessados);
-	public Int32 TotalAtasProcessadas => metricasPorOrgao.Values.Sum(x => x.AtasProcessadas);
-	public Int32 TotalItensIndexados => metricasPorOrgao.Values.Sum(x => x.ItensProcessados);
+	public Int32 TotalComprasProcessadas {
+		get => totalComprasOverride ?? metricasPorOrgao.Values.Sum(x => x.ComprasProcessadas);
+		set => totalComprasOverride = value;
+	}
+
+	public Int32 TotalContratosProcessados {
+		get => totalContratosOverride ?? metricasPorOrgao.Values.Sum(x => x.ContratosProcessados);
+		set => totalContratosOverride = value;
+	}
+
+	public Int32 TotalAtasProcessadas {
+		get => totalAtasOverride ?? metricasPorOrgao.Values.Sum(x => x.AtasProcessadas);
+		set => totalAtasOverride = value;
+	}
+
+	public Int32 TotalItensIndexados {
+		get => totalItensOverride ?? metricasPorOrgao.Values.Sum(x => x.ItensProcessados);
+		set => totalItensOverride = value;
+	}
 
 	public MetricasOrgao ObterOuCriarMetricasOrgao(Int64 identificadorDoOrgao) {
 		return metricasPorOrgao.GetOrAdd(identificadorDoOrgao, id => new MetricasOrgao(id));
