@@ -70,6 +70,12 @@ public enum EconomIAErrorCodes {
 
 	[Description("User is not active.")]
 	UsuarioInativo,
+
+	[Description("Ata not found.")]
+	AtaNotFound,
+
+	[Description("Invalid ata request.")]
+	InvalidAtaRequest,
 }
 
 public static class EconomIAErrorCodesExtensions {

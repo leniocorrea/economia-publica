@@ -24,6 +24,13 @@ public static class RepositoryErrorExtensions {
 		};
 	}
 
+	public static HandlerResultError ToAtaError(this RepositoryError error) {
+		return error.Code switch {
+			NotFound => new EconomIAApplicationError(AtaNotFound, error.Message),
+			_ => new EconomIAApplicationError(InvalidAtaRequest, error.Message),
+		};
+	}
+
 	public static HandlerResultError ToOrgaoMonitoradoError(this RepositoryError error) {
 		return error.Code switch {
 			NotFound => new EconomIAApplicationError(OrgaoMonitoradoNotFound, error.Message),

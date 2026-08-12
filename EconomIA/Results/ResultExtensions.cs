@@ -17,6 +17,7 @@ public static class ResultExtensions {
 		[OrgaoMonitoradoNotFound] = NotFound,
 		[ConfiguracaoCargaNotFound] = NotFound,
 		[UsuarioNotFound] = NotFound,
+		[AtaNotFound] = NotFound,
 
 		[MultipleOrgaosFound] = Conflict,
 		[OrgaoMonitoradoAlreadyExists] = Conflict,
@@ -28,6 +29,7 @@ public static class ResultExtensions {
 		[InvalidOrgaoMonitoradoRequest] = BadRequest,
 		[InvalidConfiguracaoCargaRequest] = BadRequest,
 		[InvalidUsuarioRequest] = BadRequest,
+		[InvalidAtaRequest] = BadRequest,
 		[OtherError] = BadRequest,
 
 		[InvalidCredentials] = Unauthorized,
