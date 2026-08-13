@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
@@ -31,24 +32,104 @@ public class SearchItensDaCompraHandlerTests {
 		handler = new SearchItensDaCompraQuery.Handler(searcher, reader, atasReader, contratosReader);
 	}
 
-	[Fact]
-	public async Task descricao_vazia_retorna_falha() {
-		var query = new SearchItensDaCompraQuery.Query("", null, null, null);
+	[Theory]
+	[InlineData(null)]
+	[InlineData("")]
+	[InlineData("   ")]
+	public async Task descricao_ausente_lista_sem_filtro_de_texto(String? descricao) {
+		var searchResult = new SearchResult(ImmutableArray<Int64>.Empty, 0, false);
 
-		var result = await handler.Handle(query, CancellationToken.None);
+		searcher.Search(
+			Arg.Any<String?>(),
+			Arg.Any<SearchFilters?>(),
+			Arg.Any<EconomIA.Common.Persistence.Pagination.PaginationParameters?>(),
+			Arg.Any<CancellationToken>()
+		).Returns(Result.Success<SearchResult, RepositoryError>(searchResult));
 
-		result.IsFailure.Should().BeTrue();
-		result.Error.ResultError.ToProblemString().Should().Contain("Descrição é obrigatória");
+		var result = await handler.Handle(
+			new SearchItensDaCompraQuery.Query(descricao, null, null, null),
+			CancellationToken.None);
+
+		result.IsSuccess.Should().BeTrue();
+
+		await searcher.Received(1).Search(
+			descricao,
+			Arg.Any<SearchFilters?>(),
+			Arg.Any<EconomIA.Common.Persistence.Pagination.PaginationParameters?>(),
+			Arg.Any<CancellationToken>());
 	}
 
 	[Fact]
-	public async Task descricao_apenas_espacos_retorna_falha() {
-		var query = new SearchItensDaCompraQuery.Query("   ", null, null, null);
+	public async Task resposta_respeita_a_ordem_devolvida_pela_busca() {
+		var idsNaOrdemDaBusca = ImmutableArray.Create<Int64>(30, 10, 20);
+
+		searcher.Search(
+			Arg.Any<String?>(),
+			Arg.Any<SearchFilters?>(),
+			Arg.Any<EconomIA.Common.Persistence.Pagination.PaginationParameters?>(),
+			Arg.Any<CancellationToken>()
+		).Returns(Result.Success<SearchResult, RepositoryError>(
+			new SearchResult(idsNaOrdemDaBusca, 3, false)));
+
+		reader.FilterWithCompraAndOrgao(
+			Arg.Any<EconomIA.Common.Domain.Specification<ItemDaCompra>>(),
+			Arg.Any<CancellationToken>()
+		).Returns(Result.Success<ImmutableArray<ItemDaCompra>, RepositoryError>(
+			ImmutableArray.Create(CriarItem(10), CriarItem(20), CriarItem(30))));
+
+		var result = await handler.Handle(
+			new SearchItensDaCompraQuery.Query(null, null, null, null),
+			CancellationToken.None);
+
+		result.IsSuccess.Should().BeTrue();
+		result.Value.Items.Select(x => x.Id).Should().ContainInOrder(30, 10, 20);
+	}
+
+	private static ItemDaCompra CriarItem(Int64 id) {
+		return new ItemDaCompra(
+			id: id,
+			identificadorDaCompra: id,
+			numeroItem: 1,
+			criadoEm: new DateTime(2026, 1, 1),
+			atualizadoEm: new DateTime(2026, 1, 1),
+			descricao: $"Item {id}",
+			temResultado: true);
+	}
+
+	[Fact]
+	public async Task descricao_ausente_preserva_os_filtros() {
+		var searchResult = new SearchResult(ImmutableArray<Int64>.Empty, 0, false);
+
+		searcher.Search(
+			Arg.Any<String?>(),
+			Arg.Any<SearchFilters?>(),
+			Arg.Any<EconomIA.Common.Persistence.Pagination.PaginationParameters?>(),
+			Arg.Any<CancellationToken>()
+		).Returns(Result.Success<SearchResult, RepositoryError>(searchResult));
+
+		var query = new SearchItensDaCompraQuery.Query(
+			null, null, null, null,
+			new DateTime(2026, 1, 1),
+			new DateTime(2026, 8, 12),
+			"municipio",
+			"SP",
+			null, null, null, null,
+			true);
 
 		var result = await handler.Handle(query, CancellationToken.None);
 
-		result.IsFailure.Should().BeTrue();
-		result.Error.ResultError.ToProblemString().Should().Contain("Descrição é obrigatória");
+		result.IsSuccess.Should().BeTrue();
+
+		await searcher.Received(1).Search(
+			null,
+			Arg.Is<SearchFilters?>(f =>
+				f!.UfSigla == "SP" &&
+				f.RazaoSocial == "municipio" &&
+				f.SomenteComAdesao == true &&
+				f.DataInclusaoInicio == new DateTime(2026, 1, 1) &&
+				f.DataInclusaoFim == new DateTime(2026, 8, 12)),
+			Arg.Any<EconomIA.Common.Persistence.Pagination.PaginationParameters?>(),
+			Arg.Any<CancellationToken>());
 	}
 
 	[Fact]

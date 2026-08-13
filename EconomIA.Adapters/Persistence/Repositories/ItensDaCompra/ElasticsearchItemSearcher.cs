@@ -22,7 +22,7 @@ public class ElasticsearchItemSearcher : IItensDaCompraSearcher {
 	}
 
 	public async Task<Result<SearchResult, RepositoryError>> Search(
-		String query,
+		String? query,
 		SearchFilters? filters = null,
 		PaginationParameters? pagination = null,
 		CancellationToken cancellationToken = default) {
@@ -33,14 +33,20 @@ public class ElasticsearchItemSearcher : IItensDaCompraSearcher {
 			offset = cursorValue;
 		}
 
+		var semTermoDeBusca = String.IsNullOrWhiteSpace(query);
+
+		var request = new SearchRequest(IndexName) {
+			From = offset,
+			Size = limit + 1,
+			Query = BuildQuery(query, filters)
+		};
+
+		if (semTermoDeBusca) {
+			request.Sort = BuildSortPorDataDeInclusao();
+		}
+
 		try {
-			var response = await client.SearchAsync<ItemDocument>(s => s
-				.Index(IndexName)
-				.From(offset)
-				.Size(limit + 1)
-				.Query(BuildQuery(query, filters)),
-				cancellationToken
-			);
+			var response = await client.SearchAsync<ItemDocument>(request, cancellationToken);
 
 			if (!response.IsValidResponse) {
 				var errorMessage = response.ElasticsearchServerError?.Error?.Reason ?? "Elasticsearch error";
@@ -65,13 +71,24 @@ public class ElasticsearchItemSearcher : IItensDaCompraSearcher {
 		}
 	}
 
-	internal static BoolQuery BuildQuery(String query, SearchFilters? filters) {
+	internal static List<SortOptions> BuildSortPorDataDeInclusao() {
+		return new List<SortOptions> {
+			SortOptions.Field(new Field("dataInclusao"), new FieldSort { Order = SortOrder.Desc }),
+			SortOptions.Field(new Field("id"), new FieldSort { Order = SortOrder.Desc })
+		};
+	}
+
+	internal static BoolQuery BuildQuery(String? query, SearchFilters? filters) {
 		var queries = new List<Query>();
 
-		queries.Add(new MatchQuery(new Field("descricao")) {
-			Query = query,
-			Fuzziness = new Fuzziness("AUTO")
-		});
+		if (String.IsNullOrWhiteSpace(query)) {
+			queries.Add(new MatchAllQuery());
+		} else {
+			queries.Add(new MatchQuery(new Field("descricao")) {
+				Query = query,
+				Fuzziness = new Fuzziness("AUTO")
+			});
+		}
 
 		if (filters is not null) {
 			if (!String.IsNullOrWhiteSpace(filters.RazaoSocial)) {

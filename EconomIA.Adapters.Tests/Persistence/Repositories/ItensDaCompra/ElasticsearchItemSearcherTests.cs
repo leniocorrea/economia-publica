@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using EconomIA.Adapters.Persistence.Repositories.ItensDaCompra;
 using EconomIA.Domain.Repositories;
 using FluentAssertions;
@@ -13,6 +14,35 @@ public class ElasticsearchItemSearcherTests {
 
 		boolQuery.Should().NotBeNull();
 		boolQuery.Must.Should().HaveCount(1);
+	}
+
+	[Theory]
+	[InlineData(null)]
+	[InlineData("")]
+	[InlineData("   ")]
+	public void sem_descricao_usa_match_all(String? descricao) {
+		var boolQuery = ElasticsearchItemSearcher.BuildQuery(descricao, null);
+
+		boolQuery.Must.Should().HaveCount(1);
+
+		var clausula = boolQuery.Must!.First();
+		clausula.TryGet<Elastic.Clients.Elasticsearch.QueryDsl.MatchAllQuery>(out var matchAll).Should().BeTrue();
+		matchAll.Should().NotBeNull();
+	}
+
+	[Fact]
+	public void sem_descricao_mantem_os_demais_filtros() {
+		var filtros = new SearchFilters(
+			new DateTime(2026, 1, 1),
+			new DateTime(2026, 8, 12),
+			"Prefeitura",
+			"SP",
+			null, null, null, null,
+			true);
+
+		var boolQuery = ElasticsearchItemSearcher.BuildQuery(null, filtros);
+
+		boolQuery.Must.Should().HaveCount(5);
 	}
 
 	[Fact]

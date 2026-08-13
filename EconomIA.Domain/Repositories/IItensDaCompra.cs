@@ -18,7 +18,7 @@ public interface IItensDaCompraReader : IReadRepository<ItemDaCompra> {
 
 public interface IItensDaCompraSearcher {
 	Task<Result<SearchResult, RepositoryError>> Search(
-		String query,
+		String? query,
 		SearchFilters? filters = null,
 		PaginationParameters? pagination = null,
 		CancellationToken cancellationToken = default);

@@ -15,7 +15,7 @@ namespace EconomIA.Application.Queries.SearchItensDaCompra;
 
 public static class SearchItensDaCompra {
 	public record Query(
-		String Descricao,
+		String? Descricao,
 		String? Order,
 		String? Cursor,
 		Int32? Limit,
@@ -133,10 +133,6 @@ public static class SearchItensDaCompra {
 		IContratosReader contratosReader) : QueryHandler<Query, Response> {
 
 		public override async Task<Result<Response, HandlerResultError>> Handle(Query query, CancellationToken cancellationToken = default) {
-			if (String.IsNullOrWhiteSpace(query.Descricao)) {
-				return Failure(InvalidArgument, "Descrição é obrigatória para busca");
-			}
-
 			var paginationResult = PaginationParameters.Create(query.Order, query.Cursor, query.Limit);
 
 			if (paginationResult.IsFailure) {
@@ -177,7 +173,13 @@ public static class SearchItensDaCompra {
 
 			var itensDoElastic = itemsResult.Value;
 
-			var itensFiltrados = itensDoElastic.AsEnumerable();
+			var posicaoNaBusca = search.Ids
+				.Select((identificador, posicao) => new { identificador, posicao })
+				.ToDictionary(x => x.identificador, x => x.posicao);
+
+			var itensFiltrados = itensDoElastic
+				.OrderBy(x => posicaoNaBusca.TryGetValue(x.Id, out var posicao) ? posicao : Int32.MaxValue)
+				.AsEnumerable();
 
 			if (query.ValorUnitarioHomologadoMinimo.HasValue) {
 				itensFiltrados = itensFiltrados.Where(x =>

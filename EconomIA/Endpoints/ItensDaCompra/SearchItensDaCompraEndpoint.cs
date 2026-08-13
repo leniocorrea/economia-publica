@@ -23,7 +23,7 @@ public static class SearchItensDaCompraEndpoint {
 
 	private static async Task<IResult> Handle(
 		[FromServices] IMediator mediator,
-		[FromQuery] String descricao,
+		[FromQuery] String? descricao,
 		[FromQuery] String? order,
 		[FromQuery] String? cursor,
 		[FromQuery] Int32? limit,
