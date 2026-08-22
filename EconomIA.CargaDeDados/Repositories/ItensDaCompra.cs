@@ -58,19 +58,21 @@ public class ItensDaCompra {
 		return await conexao.ExecuteScalarAsync<long>(sql, item);
 	}
 
-	public async Task<List<ItemAdesao>> ObterAdesaoDosItensAsync() {
+	public async Task<List<AtasDoItem>> ObterAtasDosItensAsync() {
 		var sql = @"
 			select
 				i.identificador as Id,
-				max(a.vigencia_fim)::timestamp as AtaAdesaoVigenciaFim
+				max(a.vigencia_fim)::timestamp as AtaVigenciaFim,
+				max(coalesce(a.data_assinatura::timestamp, a.data_publicacao_pncp::timestamp)) as AtaDataDeReferencia,
+				max(case when a.possibilidade_adesao then a.vigencia_fim end)::timestamp as AtaAdesaoVigenciaFim
 			from public.item_da_compra i
 			join public.compra c on c.identificador = i.identificador_da_compra
 			join public.ata a on a.numero_controle_pncp_compra = c.numero_controle_pncp
-			where a.possibilidade_adesao = true and a.cancelado = false and i.tem_resultado = true
+			where a.cancelado = false and a.vigencia_fim >= current_date and i.tem_resultado = true
 			group by i.identificador;
 		";
 
-		var resultado = await conexao.QueryAsync<ItemAdesao>(sql, commandTimeout: 600);
+		var resultado = await conexao.QueryAsync<AtasDoItem>(sql, commandTimeout: 600);
 		return resultado.ToList();
 	}
 }

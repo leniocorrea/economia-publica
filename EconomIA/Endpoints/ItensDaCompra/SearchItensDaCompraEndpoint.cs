@@ -35,7 +35,10 @@ public static class SearchItensDaCompraEndpoint {
 		[FromQuery] Decimal? valorUnitarioHomologadoMaximo,
 		[FromQuery] Decimal? valorTotalHomologadoMinimo,
 		[FromQuery] Decimal? valorTotalHomologadoMaximo,
-		[FromQuery] Boolean? apenasComAdesao) {
+		[FromQuery] Boolean? apenasComAdesao,
+		[FromQuery] Boolean? apenasComAtaVigente,
+		[FromQuery] DateTime? dataDaAtaInicio,
+		[FromQuery] DateTime? dataDaAtaFim) {
 		var result = await mediator.Send(new SearchItensDaCompra.Query(
 			descricao,
 			order,
@@ -49,7 +52,10 @@ public static class SearchItensDaCompraEndpoint {
 			valorUnitarioHomologadoMaximo,
 			valorTotalHomologadoMinimo,
 			valorTotalHomologadoMaximo,
-			apenasComAdesao));
+			apenasComAdesao,
+			apenasComAtaVigente,
+			dataDaAtaInicio,
+			dataDaAtaFim));
 
 		return result.ToOk(Response.From);
 	}

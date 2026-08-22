@@ -27,7 +27,10 @@ public static class SearchItensDaCompra {
 		Decimal? ValorUnitarioHomologadoMaximo = null,
 		Decimal? ValorTotalHomologadoMinimo = null,
 		Decimal? ValorTotalHomologadoMaximo = null,
-		Boolean? ApenasComAdesao = null) : IQuery<Response>;
+		Boolean? ApenasComAdesao = null,
+		Boolean? ApenasComAtaVigente = null,
+		DateTime? DataDaAtaInicio = null,
+		DateTime? DataDaAtaFim = null) : IQuery<Response>;
 
 	public record Response(Response.Item[] Items, Int64 TotalHits, Boolean HasMoreItems, String? NextCursor) {
 		public record Item(
@@ -141,6 +144,10 @@ public static class SearchItensDaCompra {
 
 			var pagination = paginationResult.Value;
 
+			if (query.DataDaAtaInicio.HasValue && query.DataDaAtaFim.HasValue && query.DataDaAtaInicio.Value.Date > query.DataDaAtaFim.Value.Date) {
+				return Failure(InvalidArgument, "Data inicial da ata não pode ser maior que a data final.");
+			}
+
 			var filters = new SearchFilters(
 				query.DataInclusaoInicio,
 				query.DataInclusaoFim,
@@ -150,7 +157,10 @@ public static class SearchItensDaCompra {
 				query.ValorUnitarioHomologadoMaximo,
 				query.ValorTotalHomologadoMinimo,
 				query.ValorTotalHomologadoMaximo,
-				query.ApenasComAdesao);
+				query.ApenasComAdesao,
+				query.ApenasComAtaVigente,
+				query.DataDaAtaInicio,
+				query.DataDaAtaFim);
 
 			var searchResult = await searcher.Search(query.Descricao, filters, pagination, cancellationToken);
 

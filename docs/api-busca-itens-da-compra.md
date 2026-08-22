@@ -34,9 +34,15 @@ Busca itens de compras públicas (indexados no Elasticsearch a partir dos dados 
 | `valorUnitarioHomologadoMaximo` | decimal | não | Idem, valor unitário homologado ≤ ao informado. |
 | `valorTotalHomologadoMinimo` | decimal | não | Idem, valor total homologado ≥ ao informado. |
 | `valorTotalHomologadoMaximo` | decimal | não | Idem, valor total homologado ≤ ao informado. |
+| `apenasComAdesao` | bool | não | Mantém apenas itens com ata vigente **e adesão permitida** (`adesao.situacao = "permitida"`). Resolvido no Elasticsearch. |
+| `apenasComAtaVigente` | bool | não | Mantém apenas itens com **alguma ata vigente** (não cancelada, `vigenciaFim >= hoje`), permitindo adesão ou não. Resolvido no Elasticsearch. |
+| `dataDaAtaInicio` | date | não | Limite inferior da **data de referência da ata** (assinatura; na falta, publicação no PNCP) — a mesma usada em `GET /v1/atas`. Tratado como data (dia inteiro). |
+| `dataDaAtaFim` | date | não | Limite superior da data de referência da ata. O dia informado é **incluído por inteiro**. `dataDaAtaInicio > dataDaAtaFim` → `400`. |
 | `limit` | int | não | Tamanho da página (padrão `20`). |
 | `cursor` | string | não | Cursor de paginação (offset numérico). Use o `nextCursor` da resposta anterior. |
-| `order` | string | não | Aceito, mas **não aplicado**: com `descricao`, ordena por relevância; sem `descricao`, por `dataInclusao` decrescente. |
+| `order` | string | não | Aceito, mas **não aplicado**: com `descricao`, ordena por relevância; sem `descricao`, por `dataInclusao` decrescente — ou pela **data da ata** decrescente quando qualquer filtro de ata (`apenasComAdesao`, `apenasComAtaVigente`, `dataDaAta*`) está ativo. |
+
+> **Filtros de ata são do item, não da compra.** Todos os três olham a ata **mais recente, vigente e não cancelada** da compra, e só valem para itens com resultado homologado (mesma regra do bloco `adesao`). Eles são resolvidos no índice, então `totalHits` e a paginação refletem o filtro. Com `descricao`, a busca textual continua por relevância e os filtros de ata apenas restringem o conjunto.
 
 > **Atenção — filtros de valor:** os quatro filtros `valor*Homologado*` são aplicados **em memória, depois** da paginação do Elasticsearch. Eles reduzem os itens retornados na página, mas **não alteram o `totalHits`** (que vem do Elasticsearch). Para uma contagem exata filtrada por valor, isso ainda não é suportado.
 
@@ -299,4 +305,20 @@ GET /v1/itens-da-compra?dataInclusaoInicio=2026-08-05&apenasComAdesao=true&limit
 ```
 
 Para trazer apenas o que tem ata vigente com adesão permitida, use `apenasComAdesao=true` — sem esse filtro, a listagem inclui compras sem ata.
+
+### "Quais atas saíram recentemente?"
+
+O período de `dataInclusaoInicio/Fim` é o da **compra**, e a ata costuma ser assinada semanas ou meses depois dela. Para listar itens cujas **atas** foram disponibilizadas num período, filtre pela data da ata:
+
+```
+GET /v1/itens-da-compra?apenasComAtaVigente=true&dataDaAtaInicio=2026-07-20&dataDaAtaFim=2026-08-19&limit=50
+GET /v1/itens-da-compra?apenasComAdesao=true&dataDaAtaInicio=2026-07-20&ufSigla=GO
+GET /v1/itens-da-compra?descricao=limpeza&apenasComAtaVigente=true&dataDaAtaInicio=2026-07-20
+```
+
+Sem `descricao`, o resultado vem ordenado pela data da ata (mais recente primeiro); com `descricao`, por relevância. Todos os demais filtros (`ufSigla`, `razaoSocial`, `dataInclusao*`, valores, paginação) continuam valendo.
+
+> **Não filtre adesão/homologação só no cliente quando não houver `descricao`.** Sem termo de busca a ordem é "mais recente primeiro", e compras recém-publicadas quase nunca têm resultado homologado nem ata (isso chega semanas depois). Uma página de 50 itens filtrada no navegador por `adesao.disponivel` tende a ficar vazia mesmo havendo milhares de atas vigentes no período — o filtro precisa ir na query string (`apenasComAdesao`, `apenasComAtaVigente`, `dataDaAta*`) para ser aplicado no Elasticsearch antes da paginação.
+
+> **Atualização dos filtros de ata:** os campos que os sustentam no índice (`ataVigenciaFim`, `ataDataDeReferencia`, `ataAdesaoVigenciaFim`) são recalculados a partir do banco ao fim de **toda** carga (agendada ou manual) e também podem ser refeitos sob demanda com `POST /v1/execucoes` em modo `enriquecimento`. Só entram no cálculo atas não canceladas e vigentes na data do enriquecimento; um item cuja única ata foi cancelada depois mantém os valores antigos até a próxima ata vigente daquela compra (o bloco `adesao`, calculado do banco, não é afetado).
 - Campos marcados como "não populado atualmente" existem no contrato, mas hoje retornam `null`.

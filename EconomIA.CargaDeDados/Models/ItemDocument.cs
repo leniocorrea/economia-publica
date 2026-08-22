@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace EconomIA.CargaDeDados.Models;
 
 public class ItemDocument {
@@ -12,4 +14,8 @@ public class ItemDocument {
 	public Decimal? ValorTotalHomologado { get; set; }
 }
 
-public record ItemAdesao(Int64 Id, DateTime AtaAdesaoVigenciaFim);
+public record AtasDoItem(
+	Int64 Id,
+	[property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] DateTime? AtaVigenciaFim,
+	[property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] DateTime? AtaDataDeReferencia,
+	[property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] DateTime? AtaAdesaoVigenciaFim);

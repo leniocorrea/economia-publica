@@ -461,15 +461,15 @@ public class ServicoCargaBrasil {
 		return new ResultadoReconciliacao(totalCompras, totalItens, orgaosProcessados.Count);
 	}
 
-	public async Task<ResultadoEnriquecimento> EnriquecerIndiceComAdesaoAsync(CancellationToken cancellationToken = default) {
-		List<ItemAdesao> itens;
+	public async Task<ResultadoEnriquecimento> EnriquecerIndiceComAtasAsync(CancellationToken cancellationToken = default) {
+		List<AtasDoItem> itens;
 
 		using (var scope = scopeFactory.CreateScope()) {
 			var itensRepo = scope.ServiceProvider.GetRequiredService<ItensDaCompra>();
-			itens = await itensRepo.ObterAdesaoDosItensAsync();
+			itens = await itensRepo.ObterAtasDosItensAsync();
 		}
 
-		logger.LogInformation("Enriquecimento iniciado: {Total} itens de adesao a atualizar", itens.Count);
+		logger.LogInformation("Enriquecimento iniciado: {Total} itens com ata vigente a atualizar", itens.Count);
 
 		var total = 0;
 
@@ -478,7 +478,7 @@ public class ServicoCargaBrasil {
 				break;
 			}
 
-			await AtualizarAdesaoNoElasticAsync(lote, cancellationToken);
+			await AtualizarAtasNoElasticAsync(lote, cancellationToken);
 			total += lote.Length;
 			logger.LogInformation("Enriquecimento: {Total} itens atualizados", total);
 		}
@@ -488,10 +488,9 @@ public class ServicoCargaBrasil {
 		return new ResultadoEnriquecimento(total);
 	}
 
-	private async Task AtualizarAdesaoNoElasticAsync(ItemAdesao[] itens, CancellationToken cancellationToken) {
+	private async Task AtualizarAtasNoElasticAsync(AtasDoItem[] itens, CancellationToken cancellationToken) {
 		var response = await elasticClient.BulkAsync(b => b
-			.Index("itens-da-compra")
-			.UpdateMany<ItemAdesao>(itens, (op, item) => op
+			.UpdateMany<AtasDoItem>(itens, (op, item) => op
 				.Id(item.Id)
 				.Doc(item)), cancellationToken);
 

@@ -187,4 +187,88 @@ public class ElasticsearchItemSearcherTests {
 
 		boolQuery.Must.Should().HaveCount(1);
 	}
+
+	[Fact]
+	public void com_somente_com_ata_vigente_adiciona_date_range_query_de_vigencia_da_ata() {
+		var filtros = new SearchFilters(
+			null, null, null, null, null, null, null, null,
+			SomenteComAtaVigente: true);
+
+		var boolQuery = ElasticsearchItemSearcher.BuildQuery("notebook", filtros);
+
+		boolQuery.Must.Should().HaveCount(2);
+	}
+
+	[Fact]
+	public void com_periodo_da_ata_adiciona_unico_date_range_query() {
+		var filtros = new SearchFilters(
+			null, null, null, null, null, null, null, null,
+			DataDaAtaInicio: new DateTime(2026, 7, 20),
+			DataDaAtaFim: new DateTime(2026, 8, 19));
+
+		var boolQuery = ElasticsearchItemSearcher.BuildQuery(null, filtros);
+
+		boolQuery.Must.Should().HaveCount(2);
+	}
+
+	[Fact]
+	public void filtros_de_ata_somam_se_aos_demais_filtros() {
+		var filtros = new SearchFilters(
+			new DateTime(2026, 1, 1),
+			new DateTime(2026, 8, 12),
+			"Prefeitura",
+			"SP",
+			null, null, null, null,
+			SomenteComAdesao: true,
+			SomenteComAtaVigente: true,
+			DataDaAtaInicio: new DateTime(2026, 7, 20));
+
+		var boolQuery = ElasticsearchItemSearcher.BuildQuery("notebook", filtros);
+
+		boolQuery.Must.Should().HaveCount(7);
+	}
+
+	[Fact]
+	public void com_descricao_nao_define_ordenacao_e_fica_por_relevancia() {
+		var filtros = new SearchFilters(
+			null, null, null, null, null, null, null, null,
+			SomenteComAtaVigente: true);
+
+		ElasticsearchItemSearcher.CampoDeOrdenacao("notebook", filtros).Should().BeNull();
+	}
+
+	[Fact]
+	public void sem_descricao_e_sem_filtro_de_ata_ordena_por_data_de_inclusao() {
+		var filtros = new SearchFilters(null, null, null, "SP", null, null, null, null);
+
+		ElasticsearchItemSearcher.CampoDeOrdenacao(null, filtros).Should().Be(ElasticsearchItemSearcher.CampoDataInclusao);
+		ElasticsearchItemSearcher.CampoDeOrdenacao("  ", null).Should().Be(ElasticsearchItemSearcher.CampoDataInclusao);
+	}
+
+	[Theory]
+	[InlineData(true, null, false, false)]
+	[InlineData(null, true, false, false)]
+	[InlineData(null, null, true, false)]
+	[InlineData(null, null, false, true)]
+	public void sem_descricao_com_qualquer_filtro_de_ata_ordena_pela_data_da_ata(Boolean? somenteComAdesao, Boolean? somenteComAtaVigente, Boolean comInicio, Boolean comFim) {
+		var filtros = new SearchFilters(
+			null, null, null, null, null, null, null, null,
+			somenteComAdesao,
+			somenteComAtaVigente,
+			comInicio ? new DateTime(2026, 7, 20) : null,
+			comFim ? new DateTime(2026, 8, 19) : null);
+
+		ElasticsearchItemSearcher.CampoDeOrdenacao(null, filtros).Should().Be(ElasticsearchItemSearcher.CampoAtaDataDeReferencia);
+	}
+
+	[Fact]
+	public void filtros_de_ata_desligados_nao_contam_como_filtro_de_ata() {
+		var filtros = new SearchFilters(
+			null, null, null, null, null, null, null, null,
+			SomenteComAdesao: false,
+			SomenteComAtaVigente: false);
+
+		filtros.FiltraPorAta.Should().BeFalse();
+		ElasticsearchItemSearcher.BuildQuery(null, filtros).Must.Should().HaveCount(1);
+	}
 }

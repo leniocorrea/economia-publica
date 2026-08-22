@@ -18,5 +18,6 @@
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\EconomIA.CargaDeDados\EconomIA.CargaDeDados.csproj" />
+		<ProjectReference Include="..\EconomIA.Adapters\EconomIA.Adapters.csproj" />
 	</ItemGroup>
 </Project>

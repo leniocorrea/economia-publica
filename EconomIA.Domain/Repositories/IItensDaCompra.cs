@@ -33,7 +33,17 @@ public record SearchFilters(
 	Decimal? ValorUnitarioHomologadoMaximo,
 	Decimal? ValorTotalHomologadoMinimo,
 	Decimal? ValorTotalHomologadoMaximo,
-	Boolean? SomenteComAdesao = null);
+	Boolean? SomenteComAdesao = null,
+	Boolean? SomenteComAtaVigente = null,
+	DateTime? DataDaAtaInicio = null,
+	DateTime? DataDaAtaFim = null) {
+
+	public Boolean FiltraPorAta =>
+		SomenteComAdesao == true
+		|| SomenteComAtaVigente == true
+		|| DataDaAtaInicio.HasValue
+		|| DataDaAtaFim.HasValue;
+}
 
 public record SearchResult(ImmutableArray<Int64> Ids, Int64 TotalHits, Boolean HasMoreItems);
 

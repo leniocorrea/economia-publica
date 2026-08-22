@@ -17,6 +17,35 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      elasticsearch:
+        image: docker.elastic.co/elasticsearch/elasticsearch:8.16.1
+        env:
+          discovery.type: single-node
+          xpack.security.enabled: "false"
+          ES_JAVA_OPTS: -Xms512m -Xmx512m
+        ports:
+          - 9200:9200
+        options: >-
+          --health-cmd "curl -fs http://localhost:9200/_cluster/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 30
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: economia_testes
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+    env:
+      ECONOMIA_TESTES_ELASTICSEARCH_URL: http://localhost:9200
+      ECONOMIA_TESTES_POSTGRES: Host=localhost;Port=5432;Database=economia_testes;Username=postgres;Password=postgres
     steps:
       - name: Checkout
         uses: actions/checkout@v4

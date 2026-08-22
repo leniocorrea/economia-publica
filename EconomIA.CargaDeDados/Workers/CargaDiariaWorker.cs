@@ -113,6 +113,8 @@ public class CargaDiariaWorker : BackgroundService {
 			metricas.TotalAtasProcessadas = resultado.AtasProcessadas;
 			metricas.TotalOrgaosProcessados = resultado.OrgaosProcessados;
 
+			await EncadearEnriquecimentoDeAdesaoAsync(servicoBrasil, ModoExecucao.Brasil, metricas, stoppingToken);
+
 			await execucoesCarga.FinalizarComSucessoAsync(execucao.Identificador, metricas);
 
 			logger.LogInformation(
@@ -149,6 +151,9 @@ public class CargaDiariaWorker : BackgroundService {
 
 			await orquestrador.ExecutarImportacaoIncrementalAsync(metricas, cnpjsFiltro: null, stoppingToken);
 
+			var servicoBrasil = servicos.GetRequiredService<ServicoCargaBrasil>();
+			await EncadearEnriquecimentoDeAdesaoAsync(servicoBrasil, ModoExecucao.Incremental, metricas, stoppingToken);
+
 			await execucoesCarga.FinalizarComSucessoAsync(execucao.Identificador, metricas);
 
 			logger.LogInformation(
@@ -170,5 +175,16 @@ public class CargaDiariaWorker : BackgroundService {
 			await execucoesCarga.FinalizarComErroAsync(execucao.Identificador, ex.Message, ex.StackTrace, metricas);
 			WorkerHealthCheck.RegistrarFimExecucao(StatusExecucao.Erro);
 		}
+	}
+
+	private async Task EncadearEnriquecimentoDeAdesaoAsync(
+		ServicoCargaBrasil servicoBrasil,
+		String modoExecucao,
+		MetricasExecucao metricas,
+		CancellationToken stoppingToken) {
+		logger.LogInformation("Encadeando enriquecimento de atas apos {Modo}", modoExecucao);
+
+		var resultado = await servicoBrasil.EnriquecerIndiceComAtasAsync(stoppingToken);
+		metricas.TotalItensIndexados += resultado.DocumentosEnriquecidos;
 	}
 }

@@ -14,11 +14,21 @@ using Elastic.Clients.Elasticsearch.QueryDsl;
 namespace EconomIA.Adapters.Persistence.Repositories.ItensDaCompra;
 
 public class ElasticsearchItemSearcher : IItensDaCompraSearcher {
-	private readonly ElasticsearchClient client;
-	private const String IndexName = "itens-da-compra";
+	private const String IndexPadrao = "itens-da-compra";
+	internal const String CampoDataInclusao = "dataInclusao";
+	internal const String CampoAtaAdesaoVigenciaFim = "ataAdesaoVigenciaFim";
+	internal const String CampoAtaVigenciaFim = "ataVigenciaFim";
+	internal const String CampoAtaDataDeReferencia = "ataDataDeReferencia";
 
-	public ElasticsearchItemSearcher(ElasticsearchClient client) {
+	private readonly ElasticsearchClient client;
+	private readonly String indexName;
+
+	public ElasticsearchItemSearcher(ElasticsearchClient client) : this(client, IndexPadrao) {
+	}
+
+	internal ElasticsearchItemSearcher(ElasticsearchClient client, String indexName) {
 		this.client = client;
+		this.indexName = indexName;
 	}
 
 	public async Task<Result<SearchResult, RepositoryError>> Search(
@@ -33,17 +43,12 @@ public class ElasticsearchItemSearcher : IItensDaCompraSearcher {
 			offset = cursorValue;
 		}
 
-		var semTermoDeBusca = String.IsNullOrWhiteSpace(query);
-
-		var request = new SearchRequest(IndexName) {
+		var request = new SearchRequest(indexName) {
 			From = offset,
 			Size = limit + 1,
-			Query = BuildQuery(query, filters)
+			Query = BuildQuery(query, filters),
+			Sort = BuildSort(query, filters)
 		};
-
-		if (semTermoDeBusca) {
-			request.Sort = BuildSortPorDataDeInclusao();
-		}
 
 		try {
 			var response = await client.SearchAsync<ItemDocument>(request, cancellationToken);
@@ -71,9 +76,23 @@ public class ElasticsearchItemSearcher : IItensDaCompraSearcher {
 		}
 	}
 
-	internal static List<SortOptions> BuildSortPorDataDeInclusao() {
+	internal static String? CampoDeOrdenacao(String? query, SearchFilters? filters) {
+		if (!String.IsNullOrWhiteSpace(query)) {
+			return null;
+		}
+
+		return filters?.FiltraPorAta == true ? CampoAtaDataDeReferencia : CampoDataInclusao;
+	}
+
+	private static List<SortOptions>? BuildSort(String? query, SearchFilters? filters) {
+		var campo = CampoDeOrdenacao(query, filters);
+
+		if (campo is null) {
+			return null;
+		}
+
 		return new List<SortOptions> {
-			SortOptions.Field(new Field("dataInclusao"), new FieldSort { Order = SortOrder.Desc }),
+			SortOptions.Field(new Field(campo), new FieldSort { Order = SortOrder.Desc }),
 			SortOptions.Field(new Field("id"), new FieldSort { Order = SortOrder.Desc })
 		};
 	}
@@ -104,20 +123,37 @@ public class ElasticsearchItemSearcher : IItensDaCompraSearcher {
 			}
 
 			if (filters.DataInclusaoInicio.HasValue || filters.DataInclusaoFim.HasValue) {
-				queries.Add(new DateRangeQuery(new Field("dataInclusao")) {
+				queries.Add(new DateRangeQuery(new Field(CampoDataInclusao)) {
 					Gte = filters.DataInclusaoInicio,
 					Lte = filters.DataInclusaoFim
 				});
 			}
 
 			if (filters.SomenteComAdesao == true) {
-				queries.Add(new DateRangeQuery(new Field("ataAdesaoVigenciaFim")) {
-					Gte = DateTime.UtcNow.AddHours(-3).Date
+				queries.Add(new DateRangeQuery(new Field(CampoAtaAdesaoVigenciaFim)) {
+					Gte = Hoje()
+				});
+			}
+
+			if (filters.SomenteComAtaVigente == true) {
+				queries.Add(new DateRangeQuery(new Field(CampoAtaVigenciaFim)) {
+					Gte = Hoje()
+				});
+			}
+
+			if (filters.DataDaAtaInicio.HasValue || filters.DataDaAtaFim.HasValue) {
+				queries.Add(new DateRangeQuery(new Field(CampoAtaDataDeReferencia)) {
+					Gte = filters.DataDaAtaInicio?.Date,
+					Lt = filters.DataDaAtaFim?.Date.AddDays(1)
 				});
 			}
 		}
 
 		return new BoolQuery { Must = queries };
+	}
+
+	private static DateTime Hoje() {
+		return DateTime.UtcNow.AddHours(-3).Date;
 	}
 }
 

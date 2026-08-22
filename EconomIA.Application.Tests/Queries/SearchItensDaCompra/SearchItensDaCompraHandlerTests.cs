@@ -85,6 +85,81 @@ public class SearchItensDaCompraHandlerTests {
 		result.Value.Items.Select(x => x.Id).Should().ContainInOrder(30, 10, 20);
 	}
 
+	[Fact]
+	public async Task filtros_de_ata_chegam_ao_searcher_mesmo_sem_descricao() {
+		var searchResult = new SearchResult(ImmutableArray<Int64>.Empty, 0, false);
+		var inicio = new DateTime(2026, 7, 20);
+		var fim = new DateTime(2026, 8, 19);
+
+		searcher.Search(
+			Arg.Any<String?>(),
+			Arg.Any<SearchFilters?>(),
+			Arg.Any<EconomIA.Common.Persistence.Pagination.PaginationParameters?>(),
+			Arg.Any<CancellationToken>()
+		).Returns(Result.Success<SearchResult, RepositoryError>(searchResult));
+
+		var query = new SearchItensDaCompraQuery.Query(
+			null, null, null, null,
+			ApenasComAdesao: true,
+			ApenasComAtaVigente: true,
+			DataDaAtaInicio: inicio,
+			DataDaAtaFim: fim);
+
+		var result = await handler.Handle(query, CancellationToken.None);
+
+		result.IsSuccess.Should().BeTrue();
+
+		await searcher.Received(1).Search(
+			null,
+			Arg.Is<SearchFilters?>(f =>
+				f != null
+				&& f.SomenteComAdesao == true
+				&& f.SomenteComAtaVigente == true
+				&& f.DataDaAtaInicio == inicio
+				&& f.DataDaAtaFim == fim),
+			Arg.Any<EconomIA.Common.Persistence.Pagination.PaginationParameters?>(),
+			Arg.Any<CancellationToken>());
+	}
+
+	[Fact]
+	public async Task filtros_de_ata_acompanham_a_busca_textual() {
+		var searchResult = new SearchResult(ImmutableArray<Int64>.Empty, 0, false);
+
+		searcher.Search(
+			Arg.Any<String?>(),
+			Arg.Any<SearchFilters?>(),
+			Arg.Any<EconomIA.Common.Persistence.Pagination.PaginationParameters?>(),
+			Arg.Any<CancellationToken>()
+		).Returns(Result.Success<SearchResult, RepositoryError>(searchResult));
+
+		var query = new SearchItensDaCompraQuery.Query(
+			"limpeza", null, null, null,
+			ApenasComAtaVigente: true);
+
+		await handler.Handle(query, CancellationToken.None);
+
+		await searcher.Received(1).Search(
+			"limpeza",
+			Arg.Is<SearchFilters?>(f => f != null && f.SomenteComAtaVigente == true),
+			Arg.Any<EconomIA.Common.Persistence.Pagination.PaginationParameters?>(),
+			Arg.Any<CancellationToken>());
+	}
+
+	[Fact]
+	public async Task periodo_da_ata_invertido_retorna_erro_sem_consultar_o_searcher() {
+		var query = new SearchItensDaCompraQuery.Query(
+			null, null, null, null,
+			DataDaAtaInicio: new DateTime(2026, 8, 19),
+			DataDaAtaFim: new DateTime(2026, 7, 20));
+
+		var result = await handler.Handle(query, CancellationToken.None);
+
+		result.IsFailure.Should().BeTrue();
+		result.Error.ResultError.ToProblemString().Should().Contain("Data inicial da ata");
+
+		await searcher.DidNotReceiveWithAnyArgs().Search(default, default, default, default);
+	}
+
 	private static ItemDaCompra CriarItem(Int64 id) {
 		return new ItemDaCompra(
 			id: id,

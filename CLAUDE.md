@@ -44,6 +44,22 @@ docker run --rm -v $(pwd):/app -w /app mcr.microsoft.com/dotnet/sdk:10.0-preview
 docker run --rm -v $(pwd):/app -w /app mcr.microsoft.com/dotnet/sdk:10.0-preview dotnet build EconomIA.CargaDeDados/EconomIA.CargaDeDados.csproj
 ```
 
+### Testes integrados (Elasticsearch + PostgreSQL)
+
+Os testes marcados com `[FatoDeIntegracaoComElasticsearch]` / `[FatoDeIntegracaoCompleta]` só rodam quando as variáveis abaixo estão definidas; sem elas aparecem como *Skipped*. O CI (`deploy.yml`) sobe os dois serviços e define as variáveis. Localmente:
+
+```bash
+docker run -d --name economia-testes-es -p 19200:9200 -e discovery.type=single-node -e xpack.security.enabled=false -e "ES_JAVA_OPTS=-Xms512m -Xmx512m" docker.elastic.co/elasticsearch/elasticsearch:8.16.1
+docker run -d --name economia-testes-pg -p 55432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=economia_testes pgvector/pgvector:pg16
+
+docker run --rm --network host -v $(pwd):/app -w /app \
+  -e ECONOMIA_TESTES_ELASTICSEARCH_URL=http://localhost:19200 \
+  -e "ECONOMIA_TESTES_POSTGRES=Host=localhost;Port=55432;Database=economia_testes;Username=postgres;Password=postgres" \
+  mcr.microsoft.com/dotnet/sdk:10.0-preview dotnet test
+```
+
+Cada execução cria um índice `itens-da-compra-testes-<guid>` (apagado ao final) e recria/trunca as tabelas do banco `economia_testes` a partir de `docker/postgresql/01_criar_banco.sql` — nunca aponte as variáveis para ES/PG de produção.
+
 ## Estrutura do Projeto
 
 - `EconomIA/` - API REST principal
