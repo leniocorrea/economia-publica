@@ -23,7 +23,9 @@ public static class ListAtas {
 		Boolean? ApenasComAdesao = null,
 		String? CnpjOrgao = null,
 		String? Cursor = null,
-		Int32? Limit = null) : IQuery<Response>;
+		Int32? Limit = null,
+		String? ObjetoContratacao = null,
+		String? ObjetoDaCompra = null) : IQuery<Response>;
 
 	public record Response(
 		Response.Item[] Items,
@@ -100,7 +102,11 @@ public static class ListAtas {
 				filtro = filtro + AtasSpecifications.DoOrgaoComCnpj(query.CnpjOrgao.Trim());
 			}
 
-			var resultado = await atas.PaginarPorDataDeReferencia(filtro, pagination, cancellationToken);
+			if (!String.IsNullOrWhiteSpace(query.ObjetoContratacao)) {
+				filtro = filtro + AtasSpecifications.ComObjetoContratacaoContendo(query.ObjetoContratacao);
+			}
+
+			var resultado = await atas.PaginarPorDataDeReferencia(filtro, pagination, query.ObjetoDaCompra, cancellationToken);
 
 			if (resultado.IsFailure) {
 				return Failure(resultado.Error.ToAtaError());

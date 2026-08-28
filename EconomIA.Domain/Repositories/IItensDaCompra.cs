@@ -36,7 +36,8 @@ public record SearchFilters(
 	Boolean? SomenteComAdesao = null,
 	Boolean? SomenteComAtaVigente = null,
 	DateTime? DataDaAtaInicio = null,
-	DateTime? DataDaAtaFim = null) {
+	DateTime? DataDaAtaFim = null,
+	String? ObjetoDaCompra = null) {
 
 	public Boolean FiltraPorAta =>
 		SomenteComAdesao == true

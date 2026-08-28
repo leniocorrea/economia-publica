@@ -75,4 +75,24 @@ public class ItensDaCompra {
 		var resultado = await conexao.QueryAsync<AtasDoItem>(sql, commandTimeout: 600);
 		return resultado.ToList();
 	}
+
+	public async Task<List<ObjetoDaCompraDoItem>> ObterObjetosDasComprasDosItensAsync(Int64 aPartirDoIdentificador, Int32 tamanhoDoLote) {
+		var sql = @"
+			select
+				i.identificador as Id,
+				c.objeto_compra as ObjetoDaCompra
+			from public.item_da_compra i
+			join public.compra c on c.identificador = i.identificador_da_compra
+			where i.identificador > @APartirDoIdentificador
+			order by i.identificador
+			limit @TamanhoDoLote;
+		";
+
+		var resultado = await conexao.QueryAsync<ObjetoDaCompraDoItem>(
+			sql,
+			new { APartirDoIdentificador = aPartirDoIdentificador, TamanhoDoLote = tamanhoDoLote },
+			commandTimeout: 600);
+
+		return resultado.ToList();
+	}
 }

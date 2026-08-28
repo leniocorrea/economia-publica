@@ -2,9 +2,10 @@
 -- Data: 2026-01-17
 
 -- Atualizar constraint para incluir modo 'brasil' na tabela execucao_carga
+ALTER TABLE public.execucao_carga ALTER COLUMN modo_execucao TYPE VARCHAR(50);
 ALTER TABLE public.execucao_carga DROP CONSTRAINT IF EXISTS chk_modo_execucao;
 ALTER TABLE public.execucao_carga ADD CONSTRAINT chk_modo_execucao
-    CHECK (modo_execucao IN ('diaria', 'incremental', 'manual', 'orgaos', 'brasil', 'reconciliacao', 'enriquecimento'));
+    CHECK (modo_execucao IN ('diaria', 'incremental', 'manual', 'orgaos', 'brasil', 'reconciliacao', 'enriquecimento', 'enriquecimento_objeto'));
 
 -- Atualizar constraint de status para incluir 'pendente' (usado pelo ExecucaoManualWorker)
 ALTER TABLE public.execucao_carga DROP CONSTRAINT IF EXISTS chk_status_execucao;

@@ -46,6 +46,49 @@ public class ElasticsearchItemSearcherTests {
 	}
 
 	[Fact]
+	public void com_objeto_da_compra_adiciona_match_query() {
+		var filtros = new SearchFilters(
+			null, null, null, null, null, null, null, null,
+			ObjetoDaCompra: "merenda escolar");
+
+		var boolQuery = ElasticsearchItemSearcher.BuildQuery("arroz", filtros);
+
+		boolQuery.Must.Should().HaveCount(2);
+	}
+
+	[Fact]
+	public void objeto_da_compra_sem_descricao_mantem_o_match_all() {
+		var filtros = new SearchFilters(
+			null, null, null, null, null, null, null, null,
+			ObjetoDaCompra: "merenda escolar");
+
+		var boolQuery = ElasticsearchItemSearcher.BuildQuery(null, filtros);
+
+		boolQuery.Must.Should().HaveCount(2);
+		boolQuery.Must!.First().TryGet<Elastic.Clients.Elasticsearch.QueryDsl.MatchAllQuery>(out _).Should().BeTrue();
+	}
+
+	[Fact]
+	public void objeto_da_compra_em_branco_nao_adiciona_clausula() {
+		var filtros = new SearchFilters(
+			null, null, null, null, null, null, null, null,
+			ObjetoDaCompra: "   ");
+
+		var boolQuery = ElasticsearchItemSearcher.BuildQuery("arroz", filtros);
+
+		boolQuery.Must.Should().HaveCount(1);
+	}
+
+	[Fact]
+	public void objeto_da_compra_ordena_por_relevancia_mesmo_sem_descricao() {
+		var filtros = new SearchFilters(
+			null, null, null, null, null, null, null, null,
+			ObjetoDaCompra: "merenda escolar");
+
+		ElasticsearchItemSearcher.CampoDeOrdenacao(null, filtros).Should().BeNull();
+	}
+
+	[Fact]
 	public void com_razao_social_adiciona_match_query_para_orgao() {
 		var filtros = new SearchFilters(
 			null, null,

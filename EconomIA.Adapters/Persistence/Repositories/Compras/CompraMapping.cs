@@ -107,6 +107,8 @@ public class CompraMapping : AggregateMapping<Compra> {
 			.IsUnique()
 			.HasDatabaseName("idx_compra_unique");
 
+		builder.HasIndex(x => x.NumeroControlePncp);
+
 		builder.HasOne(x => x.Orgao)
 			.WithMany()
 			.HasForeignKey(x => x.IdentificadorDoOrgao)

@@ -38,6 +38,7 @@ public class ServicoCargaBrasil {
 	private static readonly TimeSpan[] IntervalosRetry = { TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(30) };
 	private const Int32 MaxComprasReconciliacao = 1;
 	private const Int32 TamanhoLoteReconciliacao = 200;
+	private const Int32 LotesPorLogDeEnriquecimento = 50;
 	private const Int32 MaxTentativasReconciliacao = 5;
 	private static readonly TimeSpan DelayPorCompraReconciliacao = TimeSpan.FromMilliseconds(800);
 	private static readonly TimeSpan BackoffThrottleReconciliacao = TimeSpan.FromSeconds(30);
@@ -372,7 +373,8 @@ public class ServicoCargaBrasil {
 							Orgao = compraDto.OrgaoEntidade.RazaoSocial ?? "",
 							Data = compraDto.DataAberturaProposta ?? DateTime.MinValue,
 							DataInclusao = compraDto.DataInclusao,
-							UfSigla = compraDto.UnidadeOrgao?.UfSigla
+							UfSigla = compraDto.UnidadeOrgao?.UfSigla,
+							ObjetoDaCompra = compraDto.ObjetoCompra
 						});
 
 						Interlocked.Increment(ref itensProcessados);
@@ -497,6 +499,53 @@ public class ServicoCargaBrasil {
 		if (response.Errors) {
 			logger.LogWarning("Alguns itens falharam no enriquecimento. Total: {Total}, Erros: {Erros}",
 				itens.Length, response.ItemsWithErrors.Count());
+		}
+	}
+
+	public async Task<ResultadoEnriquecimento> EnriquecerIndiceComObjetoDaCompraAsync(CancellationToken cancellationToken = default) {
+		logger.LogInformation("Enriquecimento com objeto da compra iniciado");
+
+		var ultimoIdentificador = 0L;
+		var lotesProcessados = 0;
+		var total = 0;
+
+		while (!cancellationToken.IsCancellationRequested) {
+			List<ObjetoDaCompraDoItem> lote;
+
+			using (var scope = scopeFactory.CreateScope()) {
+				var itensRepo = scope.ServiceProvider.GetRequiredService<ItensDaCompra>();
+				lote = await itensRepo.ObterObjetosDasComprasDosItensAsync(ultimoIdentificador, TamanhoBufferElastic);
+			}
+
+			if (lote.Count == 0) {
+				break;
+			}
+
+			await AtualizarObjetoDaCompraNoElasticAsync(lote, cancellationToken);
+
+			ultimoIdentificador = lote[^1].Id;
+			lotesProcessados++;
+			total += lote.Count;
+
+			if (lotesProcessados % LotesPorLogDeEnriquecimento == 0) {
+				logger.LogInformation("Enriquecimento com objeto da compra: {Total} itens atualizados", total);
+			}
+		}
+
+		logger.LogInformation("Enriquecimento com objeto da compra finalizado: {Total} itens", total);
+
+		return new ResultadoEnriquecimento(total);
+	}
+
+	private async Task AtualizarObjetoDaCompraNoElasticAsync(List<ObjetoDaCompraDoItem> itens, CancellationToken cancellationToken) {
+		var response = await elasticClient.BulkAsync(b => b
+			.UpdateMany<ObjetoDaCompraDoItem>(itens, (op, item) => op
+				.Id(item.Id)
+				.Doc(item)), cancellationToken);
+
+		if (response.Errors) {
+			logger.LogWarning("Alguns itens falharam no enriquecimento com objeto da compra. Total: {Total}, Erros: {Erros}",
+				itens.Count, response.ItemsWithErrors.Count());
 		}
 	}
 

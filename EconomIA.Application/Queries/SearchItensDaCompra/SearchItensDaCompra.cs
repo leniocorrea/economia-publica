@@ -30,7 +30,8 @@ public static class SearchItensDaCompra {
 		Boolean? ApenasComAdesao = null,
 		Boolean? ApenasComAtaVigente = null,
 		DateTime? DataDaAtaInicio = null,
-		DateTime? DataDaAtaFim = null) : IQuery<Response>;
+		DateTime? DataDaAtaFim = null,
+		String? ObjetoDaCompra = null) : IQuery<Response>;
 
 	public record Response(Response.Item[] Items, Int64 TotalHits, Boolean HasMoreItems, String? NextCursor) {
 		public record Item(
@@ -160,7 +161,8 @@ public static class SearchItensDaCompra {
 				query.ApenasComAdesao,
 				query.ApenasComAtaVigente,
 				query.DataDaAtaInicio,
-				query.DataDaAtaFim);
+				query.DataDaAtaFim,
+				query.ObjetoDaCompra);
 
 			var searchResult = await searcher.Search(query.Descricao, filters, pagination, cancellationToken);
 

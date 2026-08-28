@@ -16,6 +16,8 @@ namespace EconomIA.Adapters.Persistence.Repositories.ItensDaCompra;
 public class ElasticsearchItemSearcher : IItensDaCompraSearcher {
 	private const String IndexPadrao = "itens-da-compra";
 	internal const String CampoDataInclusao = "dataInclusao";
+	internal const String CampoDescricao = "descricao";
+	internal const String CampoObjetoDaCompra = "objetoDaCompra";
 	internal const String CampoAtaAdesaoVigenciaFim = "ataAdesaoVigenciaFim";
 	internal const String CampoAtaVigenciaFim = "ataVigenciaFim";
 	internal const String CampoAtaDataDeReferencia = "ataDataDeReferencia";
@@ -77,7 +79,7 @@ public class ElasticsearchItemSearcher : IItensDaCompraSearcher {
 	}
 
 	internal static String? CampoDeOrdenacao(String? query, SearchFilters? filters) {
-		if (!String.IsNullOrWhiteSpace(query)) {
+		if (!String.IsNullOrWhiteSpace(query) || !String.IsNullOrWhiteSpace(filters?.ObjetoDaCompra)) {
 			return null;
 		}
 
@@ -103,13 +105,20 @@ public class ElasticsearchItemSearcher : IItensDaCompraSearcher {
 		if (String.IsNullOrWhiteSpace(query)) {
 			queries.Add(new MatchAllQuery());
 		} else {
-			queries.Add(new MatchQuery(new Field("descricao")) {
+			queries.Add(new MatchQuery(new Field(CampoDescricao)) {
 				Query = query,
 				Fuzziness = new Fuzziness("AUTO")
 			});
 		}
 
 		if (filters is not null) {
+			if (!String.IsNullOrWhiteSpace(filters.ObjetoDaCompra)) {
+				queries.Add(new MatchQuery(new Field(CampoObjetoDaCompra)) {
+					Query = filters.ObjetoDaCompra,
+					Fuzziness = new Fuzziness("AUTO")
+				});
+			}
+
 			if (!String.IsNullOrWhiteSpace(filters.RazaoSocial)) {
 				queries.Add(new MatchQuery(new Field("orgao")) {
 					Query = filters.RazaoSocial
@@ -165,4 +174,5 @@ file class ItemDocument {
 	public DateTime Data { get; set; }
 	public DateTime? DataInclusao { get; set; }
 	public String? UfSigla { get; set; }
+	public String? ObjetoDaCompra { get; set; }
 }

@@ -29,7 +29,7 @@ public static class IniciarExecucao {
 	);
 
 	public class Handler(IExecucoesCarga execucoesCarga) : CommandHandler<Command, Response> {
-		private static readonly String[] ModosValidos = [ModoExecucaoTipo.Incremental, ModoExecucaoTipo.Diaria, ModoExecucaoTipo.Brasil, ModoExecucaoTipo.Reconciliacao, ModoExecucaoTipo.Enriquecimento];
+		private static readonly String[] ModosValidos = [ModoExecucaoTipo.Incremental, ModoExecucaoTipo.Diaria, ModoExecucaoTipo.Brasil, ModoExecucaoTipo.Reconciliacao, ModoExecucaoTipo.Enriquecimento, ModoExecucaoTipo.EnriquecimentoObjeto];
 
 		public override async Task<Result<Response, HandlerResultError>> Handle(Command command, CancellationToken cancellationToken = default) {
 			var validacao = Validar(command);

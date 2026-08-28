@@ -93,6 +93,7 @@ public static class ModoExecucao {
 	public const String Brasil = "brasil";
 	public const String Reconciliacao = "reconciliacao";
 	public const String Enriquecimento = "enriquecimento";
+	public const String EnriquecimentoObjeto = "enriquecimento_objeto";
 }
 
 public static class TipoGatilho {
