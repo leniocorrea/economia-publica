@@ -13,7 +13,7 @@ namespace EconomIA.Adapters.Persistence.Migrations
             migrationBuilder.Sql("ALTER TABLE public.execucao_carga ALTER COLUMN modo_execucao TYPE VARCHAR(50);");
             migrationBuilder.Sql("ALTER TABLE public.execucao_carga DROP CONSTRAINT IF EXISTS chk_modo_execucao;");
             migrationBuilder.Sql(
-                "ALTER TABLE public.execucao_carga ADD CONSTRAINT chk_modo_execucao CHECK (modo_execucao IN ('diaria', 'incremental', 'manual', 'orgaos', 'brasil', 'reconciliacao', 'enriquecimento', 'enriquecimento_objeto'));");
+                "ALTER TABLE public.execucao_carga ADD CONSTRAINT chk_modo_execucao CHECK (modo_execucao IN ('diaria', 'incremental', 'manual', 'orgaos', 'brasil', 'reconciliacao', 'enriquecimento', 'enriquecimento_objeto')) NOT VALID;");
         }
 
         /// <inheritdoc />
@@ -22,7 +22,7 @@ namespace EconomIA.Adapters.Persistence.Migrations
             migrationBuilder.Sql("DELETE FROM public.execucao_carga WHERE modo_execucao = 'enriquecimento_objeto';");
             migrationBuilder.Sql("ALTER TABLE public.execucao_carga DROP CONSTRAINT IF EXISTS chk_modo_execucao;");
             migrationBuilder.Sql(
-                "ALTER TABLE public.execucao_carga ADD CONSTRAINT chk_modo_execucao CHECK (modo_execucao IN ('diaria', 'incremental', 'manual', 'orgaos', 'brasil', 'reconciliacao', 'enriquecimento'));");
+                "ALTER TABLE public.execucao_carga ADD CONSTRAINT chk_modo_execucao CHECK (modo_execucao IN ('diaria', 'incremental', 'manual', 'orgaos', 'brasil', 'reconciliacao', 'enriquecimento')) NOT VALID;");
             migrationBuilder.Sql("ALTER TABLE public.execucao_carga ALTER COLUMN modo_execucao TYPE VARCHAR(20);");
         }
     }
