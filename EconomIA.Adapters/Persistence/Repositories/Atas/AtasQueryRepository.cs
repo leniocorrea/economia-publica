@@ -24,6 +24,7 @@ public class AtasQueryRepository : QueryRepository<EconomIAQueryDbContext, Ata>,
 	public async Task<Result<PaginationResult<Ata>, RepositoryError>> PaginarPorDataDeReferencia(
 		Specification<Ata> filtro,
 		PaginationParameters pagina,
+		String? objetoDaCompra = null,
 		CancellationToken cancellationToken = default) {
 		CursorDaAta? cursor = null;
 
@@ -37,6 +38,15 @@ public class AtasQueryRepository : QueryRepository<EconomIAQueryDbContext, Ata>,
 			.Include(x => x.Orgao)
 			.AsExpandableEFCore()
 			.Where(filtro.Rule());
+
+		if (!String.IsNullOrWhiteSpace(objetoDaCompra)) {
+			var termo = objetoDaCompra.Trim().ToLower();
+
+			consulta = consulta.Where(x => context.Compras.Any(c =>
+				c.NumeroControlePncp == x.NumeroControlePncpCompra
+				&& c.ObjetoCompra != null
+				&& c.ObjetoCompra.ToLower().Contains(termo)));
+		}
 
 		if (cursor is not null) {
 			var dataDoCursor = cursor.DataDeReferencia;

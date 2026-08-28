@@ -14,6 +14,7 @@ public interface IAtasReader : IReadRepository<Ata> {
 	Task<Result<PaginationResult<Ata>, RepositoryError>> PaginarPorDataDeReferencia(
 		Specification<Ata> filtro,
 		PaginationParameters pagina,
+		String? objetoDaCompra = null,
 		CancellationToken cancellationToken = default);
 }
 
@@ -29,6 +30,8 @@ public static class AtasSpecifications {
 	public static Specification<Ata> VigentesEm(DateTime data) => new VigentesEm(data);
 	public static Specification<Ata> ComPossibilidadeDeAdesao() => new ComPossibilidadeDeAdesao();
 	public static Specification<Ata> DoOrgaoComCnpj(String cnpj) => new DoOrgaoComCnpj(cnpj);
+	public static Specification<Ata> ComObjetoContratacaoContendo(String termo) =>
+		new ComObjetoContratacaoContendo(termo.Trim().ToLower());
 }
 
 file class All : Specification<Ata> {
@@ -66,4 +69,9 @@ file class ComPossibilidadeDeAdesao : Specification<Ata> {
 file class DoOrgaoComCnpj(String cnpj) : Specification<Ata> {
 	public override Expression<Func<Ata, Boolean>> Rule() =>
 		x => x.Orgao != null && x.Orgao.Cnpj == cnpj;
+}
+
+file class ComObjetoContratacaoContendo(String termo) : Specification<Ata> {
+	public override Expression<Func<Ata, Boolean>> Rule() =>
+		x => x.ObjetoContratacao != null && x.ObjetoContratacao.ToLower().Contains(termo);
 }

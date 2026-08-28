@@ -75,6 +75,7 @@ CREATE TABLE IF NOT EXISTS public.compra (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_compra_unique ON public.compra (identificador_do_orgao, ano_compra, sequencial_compra);
+CREATE INDEX IF NOT EXISTS "ix_compra_NumeroControlePncp" ON public.compra (numero_controle_pncp);
 
 -- Tabela: item_da_compra
 CREATE TABLE IF NOT EXISTS public.item_da_compra (

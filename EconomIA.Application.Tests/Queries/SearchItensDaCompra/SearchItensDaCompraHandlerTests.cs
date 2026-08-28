@@ -266,6 +266,58 @@ public class SearchItensDaCompraHandlerTests {
 	}
 
 	[Fact]
+	public async Task objeto_da_compra_e_repassado_ao_buscador() {
+		var query = new SearchItensDaCompraQuery.Query(
+			"notebook",
+			null,
+			null,
+			null,
+			ObjetoDaCompra: "aquisicao de equipamentos de informatica");
+
+		var searchResult = new SearchResult(ImmutableArray<Int64>.Empty, 0, false);
+
+		SearchFilters? filtrosCapturados = null;
+		searcher.Search(
+			Arg.Any<String>(),
+			Arg.Do<SearchFilters?>(f => filtrosCapturados = f),
+			Arg.Any<EconomIA.Common.Persistence.Pagination.PaginationParameters?>(),
+			Arg.Any<CancellationToken>()
+		).Returns(Result.Success<SearchResult, RepositoryError>(searchResult));
+
+		await handler.Handle(query, CancellationToken.None);
+
+		filtrosCapturados.Should().NotBeNull();
+		filtrosCapturados!.ObjetoDaCompra.Should().Be("aquisicao de equipamentos de informatica");
+	}
+
+	[Fact]
+	public async Task filtros_de_descricao_e_objeto_da_compra_sao_independentes() {
+		var query = new SearchItensDaCompraQuery.Query(
+			null,
+			null,
+			null,
+			null,
+			ObjetoDaCompra: "merenda escolar");
+
+		var searchResult = new SearchResult(ImmutableArray<Int64>.Empty, 0, false);
+
+		searcher.Search(
+			Arg.Any<String?>(),
+			Arg.Any<SearchFilters?>(),
+			Arg.Any<EconomIA.Common.Persistence.Pagination.PaginationParameters?>(),
+			Arg.Any<CancellationToken>()
+		).Returns(Result.Success<SearchResult, RepositoryError>(searchResult));
+
+		await handler.Handle(query, CancellationToken.None);
+
+		await searcher.Received(1).Search(
+			null,
+			Arg.Is<SearchFilters?>(f => f != null && f.ObjetoDaCompra == "merenda escolar"),
+			Arg.Any<EconomIA.Common.Persistence.Pagination.PaginationParameters?>(),
+			Arg.Any<CancellationToken>());
+	}
+
+	[Fact]
 	public async Task filtra_itens_por_valor_unitario_homologado_minimo() {
 		var query = new SearchItensDaCompraQuery.Query(
 			"servico", null, null, null,

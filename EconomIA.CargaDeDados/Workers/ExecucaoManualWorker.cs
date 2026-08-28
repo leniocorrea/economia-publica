@@ -127,11 +127,17 @@ public class ExecucaoManualWorker : BackgroundService {
 				var resultado = await servicoBrasil.EnriquecerIndiceComAtasAsync(stoppingToken);
 
 				metricas.TotalItensIndexados = resultado.DocumentosEnriquecidos;
+			} else if (execucao.ModoExecucao == ModoExecucao.EnriquecimentoObjeto) {
+				var servicoBrasil = servicos.GetRequiredService<ServicoCargaBrasil>();
+
+				var resultado = await servicoBrasil.EnriquecerIndiceComObjetoDaCompraAsync(stoppingToken);
+
+				metricas.TotalItensIndexados = resultado.DocumentosEnriquecidos;
 			} else {
 				throw new InvalidOperationException($"Modo de execucao nao suportado: {execucao.ModoExecucao}");
 			}
 
-			if (execucao.ModoExecucao != ModoExecucao.Enriquecimento) {
+			if (execucao.ModoExecucao != ModoExecucao.Enriquecimento && execucao.ModoExecucao != ModoExecucao.EnriquecimentoObjeto) {
 				var servicoEnriquecimento = servicos.GetRequiredService<ServicoCargaBrasil>();
 
 				logger.LogInformation("Encadeando enriquecimento de atas apos {Modo}", execucao.ModoExecucao);

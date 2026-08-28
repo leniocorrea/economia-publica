@@ -5,7 +5,7 @@
 -- Armazena o historico de execucoes do worker de carga
 CREATE TABLE IF NOT EXISTS public.execucao_carga (
     identificador BIGSERIAL PRIMARY KEY,
-    modo_execucao VARCHAR(20) NOT NULL,
+    modo_execucao VARCHAR(50) NOT NULL,
     tipo_gatilho VARCHAR(20) NOT NULL,
     inicio_em TIMESTAMP WITH TIME ZONE NOT NULL,
     fim_em TIMESTAMP WITH TIME ZONE,

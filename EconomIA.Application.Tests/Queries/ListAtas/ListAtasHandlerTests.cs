@@ -159,6 +159,7 @@ public class ListAtasHandlerTests {
 		atas.PaginarPorDataDeReferencia(
 			Arg.Any<Specification<Ata>>(),
 			Arg.Any<PaginationParameters>(),
+			Arg.Any<String?>(),
 			Arg.Any<CancellationToken>()
 		).Returns(Result.Failure<PaginationResult<Ata>, RepositoryError>(
 			RepositoryError.InvalidFormat("Cursor inválido.")));
@@ -176,12 +177,56 @@ public class ListAtasHandlerTests {
 		result.IsFailure.Should().BeTrue();
 	}
 
+	[Fact]
+	public async Task objeto_da_ata_filtra_pelo_texto_informado() {
+		var filtro = await CapturarFiltro(new ListAtasQuery.Query(ObjetoContratacao: "Merenda"));
+
+		filtro.IsSatisfiedBy(CriarAta(
+			dataAssinatura: hoje.AddDays(-1),
+			objetoContratacao: "Registro de precos para merenda escolar")).Should().BeTrue();
+
+		filtro.IsSatisfiedBy(CriarAta(
+			dataAssinatura: hoje.AddDays(-1),
+			objetoContratacao: "Aquisicao de material de expediente")).Should().BeFalse();
+
+		filtro.IsSatisfiedBy(CriarAta(
+			dataAssinatura: hoje.AddDays(-1),
+			objetoContratacao: null)).Should().BeFalse();
+	}
+
+	[Fact]
+	public async Task objeto_da_ata_ignora_espacos_ao_redor_do_termo() {
+		var filtro = await CapturarFiltro(new ListAtasQuery.Query(ObjetoContratacao: "  MERENDA  "));
+
+		filtro.IsSatisfiedBy(CriarAta(
+			dataAssinatura: hoje.AddDays(-1),
+			objetoContratacao: "Merenda escolar")).Should().BeTrue();
+	}
+
+	[Fact]
+	public async Task objeto_da_compra_e_repassado_ao_repositorio() {
+		String? objetoCapturado = null;
+
+		atas.PaginarPorDataDeReferencia(
+			Arg.Any<Specification<Ata>>(),
+			Arg.Any<PaginationParameters>(),
+			Arg.Do<String?>(x => objetoCapturado = x),
+			Arg.Any<CancellationToken>()
+		).Returns(Result.Success<PaginationResult<Ata>, RepositoryError>(
+			new PaginationResult<Ata>(Array.Empty<Ata>(), null)));
+
+		await handler.Handle(new ListAtasQuery.Query(ObjetoDaCompra: "obras de pavimentacao"), CancellationToken.None);
+
+		objetoCapturado.Should().Be("obras de pavimentacao");
+	}
+
 	private async Task<Specification<Ata>> CapturarFiltro(ListAtasQuery.Query query) {
 		Specification<Ata>? filtro = null;
 
 		atas.PaginarPorDataDeReferencia(
 			Arg.Do<Specification<Ata>>(x => filtro = x),
 			Arg.Any<PaginationParameters>(),
+			Arg.Any<String?>(),
 			Arg.Any<CancellationToken>()
 		).Returns(Result.Success<PaginationResult<Ata>, RepositoryError>(
 			new PaginationResult<Ata>(Array.Empty<Ata>(), null)));
@@ -196,6 +241,7 @@ public class ListAtasHandlerTests {
 		atas.PaginarPorDataDeReferencia(
 			Arg.Any<Specification<Ata>>(),
 			Arg.Any<PaginationParameters>(),
+			Arg.Any<String?>(),
 			Arg.Any<CancellationToken>()
 		).Returns(Result.Success<PaginationResult<Ata>, RepositoryError>(
 			new PaginationResult<Ata>(resultado, null)));
@@ -207,13 +253,15 @@ public class ListAtasHandlerTests {
 		DateTime? vigenciaFim = null,
 		Boolean cancelado = false,
 		Boolean? possibilidadeAdesao = null,
-		String? numeroControlePncpCompra = "00000000000191-1-000001/2026") {
+		String? numeroControlePncpCompra = "00000000000191-1-000001/2026",
+		String? objetoContratacao = null) {
 		return new Ata(
 			id: 1,
 			identificadorDoOrgao: 1,
 			numeroControlePncpAta: "00000000000191-1-000001/2026-001",
 			anoAta: 2026,
 			numeroControlePncpCompra: numeroControlePncpCompra,
+			objetoContratacao: objetoContratacao,
 			cancelado: cancelado,
 			dataAssinatura: dataAssinatura,
 			vigenciaFim: vigenciaFim,

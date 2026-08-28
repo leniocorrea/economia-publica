@@ -132,7 +132,8 @@ public class ServicoCarga {
 												Orgao = item.OrgaoEntidade.RazaoSocial ?? "",
 												Data = item.DataAberturaProposta ?? DateTime.MinValue,
 												DataInclusao = item.DataInclusao,
-												UfSigla = item.UnidadeOrgao?.UfSigla
+												UfSigla = item.UnidadeOrgao?.UfSigla,
+												ObjetoDaCompra = item.ObjetoCompra
 											};
 											await elasticClient.IndexAsync(doc, token);
 											Interlocked.Increment(ref totalItensIndexados);

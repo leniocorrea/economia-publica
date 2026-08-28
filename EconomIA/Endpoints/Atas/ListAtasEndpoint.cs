@@ -29,7 +29,9 @@ public static class ListAtasEndpoint {
 		[FromQuery] Boolean? apenasComAdesao,
 		[FromQuery] String? cnpjOrgao,
 		[FromQuery] String? cursor,
-		[FromQuery] Int32? limit) {
+		[FromQuery] Int32? limit,
+		[FromQuery] String? objetoContratacao,
+		[FromQuery] String? objetoDaCompra) {
 		var result = await mediator.Send(new ListAtas.Query(
 			dataInicio,
 			dataFim,
@@ -38,7 +40,9 @@ public static class ListAtasEndpoint {
 			apenasComAdesao,
 			cnpjOrgao,
 			cursor,
-			limit));
+			limit,
+			objetoContratacao,
+			objetoDaCompra));
 
 		return result.ToOk(Response.From);
 	}

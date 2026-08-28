@@ -10,6 +10,7 @@ public class ItemDocument {
 	public DateTime Data { get; set; }
 	public DateTime? DataInclusao { get; set; }
 	public String? UfSigla { get; set; }
+	public String? ObjetoDaCompra { get; set; }
 	public Decimal? ValorUnitarioHomologado { get; set; }
 	public Decimal? ValorTotalHomologado { get; set; }
 }
@@ -19,3 +20,7 @@ public record AtasDoItem(
 	[property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] DateTime? AtaVigenciaFim,
 	[property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] DateTime? AtaDataDeReferencia,
 	[property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] DateTime? AtaAdesaoVigenciaFim);
+
+public record ObjetoDaCompraDoItem(
+	Int64 Id,
+	[property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] String? ObjetoDaCompra);

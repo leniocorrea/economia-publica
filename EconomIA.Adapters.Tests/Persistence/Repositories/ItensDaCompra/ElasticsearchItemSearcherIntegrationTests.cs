@@ -53,6 +53,7 @@ public sealed class IndiceDeItensParaTeste : IAsyncLifetime {
 					{ "orgao", new TextProperty() },
 					{ "ufSigla", new KeywordProperty() },
 					{ "dataInclusao", new DateProperty() },
+					{ ElasticsearchItemSearcher.CampoObjetoDaCompra, new TextProperty() },
 					{ ElasticsearchItemSearcher.CampoAtaAdesaoVigenciaFim, new DateProperty() },
 					{ ElasticsearchItemSearcher.CampoAtaVigenciaFim, new DateProperty() },
 					{ ElasticsearchItemSearcher.CampoAtaDataDeReferencia, new DateProperty() }
@@ -71,6 +72,7 @@ public sealed class IndiceDeItensParaTeste : IAsyncLifetime {
 				Descricao = "Notebook Dell i7",
 				Orgao = "PREFEITURA DE SAO PAULO",
 				UfSigla = "SP",
+				ObjetoDaCompra = "Aquisicao de equipamentos de informatica",
 				DataInclusao = new DateTime(2026, 8, 18)
 			},
 			new DocumentoDoIndice {
@@ -78,6 +80,7 @@ public sealed class IndiceDeItensParaTeste : IAsyncLifetime {
 				Descricao = "Notebook Lenovo",
 				Orgao = "PREFEITURA DE BELO HORIZONTE",
 				UfSigla = "MG",
+				ObjetoDaCompra = "Registro de precos para merenda escolar",
 				DataInclusao = new DateTime(2026, 5, 10),
 				AtaVigenciaFim = new DateTime(2099, 12, 31),
 				AtaDataDeReferencia = new DateTime(2026, 8, 10, 15, 30, 0),
@@ -126,6 +129,7 @@ public sealed class IndiceDeItensParaTeste : IAsyncLifetime {
 		public String Descricao { get; set; } = String.Empty;
 		public String Orgao { get; set; } = String.Empty;
 		public String? UfSigla { get; set; }
+		public String? ObjetoDaCompra { get; set; }
 		public DateTime? DataInclusao { get; set; }
 		public DateTime? AtaAdesaoVigenciaFim { get; set; }
 		public DateTime? AtaVigenciaFim { get; set; }
@@ -151,10 +155,11 @@ public class ElasticsearchItemSearcherIntegrationTests : IClassFixture<IndiceDeI
 		DateTime? dataDaAtaFim = null,
 		String? ufSigla = null,
 		DateTime? dataInclusaoInicio = null,
-		DateTime? dataInclusaoFim = null) {
+		DateTime? dataInclusaoFim = null,
+		String? objetoDaCompra = null) {
 		return new SearchFilters(
 			dataInclusaoInicio, dataInclusaoFim, null, ufSigla, null, null, null, null,
-			somenteComAdesao, somenteComAtaVigente, dataDaAtaInicio, dataDaAtaFim);
+			somenteComAdesao, somenteComAtaVigente, dataDaAtaInicio, dataDaAtaFim, objetoDaCompra);
 	}
 
 	private static async Task<SearchResult> Buscar(ElasticsearchItemSearcher searcher, String? descricao, SearchFilters? filtros, Int32 limit = 50, String? cursor = null) {
@@ -175,6 +180,20 @@ public class ElasticsearchItemSearcherIntegrationTests : IClassFixture<IndiceDeI
 			IndiceDeItensParaTeste.NotebookComAtaVencida,
 			IndiceDeItensParaTeste.NotebookComAtaVigenteEmSp
 		});
+	}
+
+	[FatoDeIntegracaoComElasticsearch]
+	public async Task filtro_por_objeto_da_compra_encontra_o_item_pelo_texto_da_compra() {
+		var resultado = await Buscar(CriarSearcher(), null, Filtros(objetoDaCompra: "merenda escolar"));
+
+		resultado.Ids.Should().Equal(IndiceDeItensParaTeste.NotebookComAdesaoPermitida);
+	}
+
+	[FatoDeIntegracaoComElasticsearch]
+	public async Task descricao_e_objeto_da_compra_se_combinam() {
+		var resultado = await Buscar(CriarSearcher(), "notebook", Filtros(objetoDaCompra: "informatica"));
+
+		resultado.Ids.Should().Equal(IndiceDeItensParaTeste.NotebookRecenteSemAta);
 	}
 
 	[FatoDeIntegracaoComElasticsearch]

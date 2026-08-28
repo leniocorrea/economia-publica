@@ -38,7 +38,8 @@ public static class SearchItensDaCompraEndpoint {
 		[FromQuery] Boolean? apenasComAdesao,
 		[FromQuery] Boolean? apenasComAtaVigente,
 		[FromQuery] DateTime? dataDaAtaInicio,
-		[FromQuery] DateTime? dataDaAtaFim) {
+		[FromQuery] DateTime? dataDaAtaFim,
+		[FromQuery] String? objetoDaCompra) {
 		var result = await mediator.Send(new SearchItensDaCompra.Query(
 			descricao,
 			order,
@@ -55,7 +56,8 @@ public static class SearchItensDaCompraEndpoint {
 			apenasComAdesao,
 			apenasComAtaVigente,
 			dataDaAtaInicio,
-			dataDaAtaFim));
+			dataDaAtaFim,
+			objetoDaCompra));
 
 		return result.ToOk(Response.From);
 	}
