@@ -38,6 +38,9 @@ Busca itens de compras públicas (indexados no Elasticsearch a partir dos dados 
 | `apenasComAtaVigente` | bool | não | Mantém apenas itens com **alguma ata vigente** (não cancelada, `vigenciaFim >= hoje`), permitindo adesão ou não. Resolvido no Elasticsearch. |
 | `dataDaAtaInicio` | date | não | Limite inferior da **data de referência da ata** (assinatura; na falta, publicação no PNCP) — a mesma usada em `GET /v1/atas`. Tratado como data (dia inteiro). |
 | `dataDaAtaFim` | date | não | Limite superior da data de referência da ata. O dia informado é **incluído por inteiro**. `dataDaAtaInicio > dataDaAtaFim` → `400`. |
+| `cnpjOrgao` | string | não | **Modo compra específica.** CNPJ do órgão comprador, com ou sem máscara. Exige `anoCompra` e `sequencialCompra`. |
+| `anoCompra` | int | não | **Modo compra específica.** Ano do edital. Exige `cnpjOrgao` e `sequencialCompra`. |
+| `sequencialCompra` | int | não | **Modo compra específica.** Sequencial do processo no órgão naquele ano. Exige `cnpjOrgao` e `anoCompra`. |
 | `limit` | int | não | Tamanho da página (padrão `20`). |
 | `cursor` | string | não | Cursor de paginação (offset numérico). Use o `nextCursor` da resposta anterior. |
 | `order` | string | não | Aceito, mas **não aplicado**: com `descricao`, ordena por relevância; sem `descricao`, por `dataInclusao` decrescente — ou pela **data da ata** decrescente quando qualquer filtro de ata (`apenasComAdesao`, `apenasComAtaVigente`, `dataDaAta*`) está ativo. |
@@ -45,6 +48,44 @@ Busca itens de compras públicas (indexados no Elasticsearch a partir dos dados 
 > **Filtros de ata são do item, não da compra.** Todos os três olham a ata **mais recente, vigente e não cancelada** da compra, e só valem para itens com resultado homologado (mesma regra do bloco `adesao`). Eles são resolvidos no índice, então `totalHits` e a paginação refletem o filtro. Com `descricao`, a busca textual continua por relevância e os filtros de ata apenas restringem o conjunto.
 
 > **Atenção — filtros de valor:** os quatro filtros `valor*Homologado*` são aplicados **em memória, depois** da paginação do Elasticsearch. Eles reduzem os itens retornados na página, mas **não alteram o `totalHits`** (que vem do Elasticsearch). Para uma contagem exata filtrada por valor, isso ainda não é suportado.
+
+---
+
+## Modo compra específica — todos os itens de um edital
+
+No PNCP uma compra **não tem id sequencial global**. Ela é identificada por uma tripla: **CNPJ do órgão + ano da compra + sequencial da compra**. Informando os três parâmetros juntos, o endpoint devolve **todos os itens daquele edital**, e não apenas os que casaram com uma busca textual.
+
+```
+GET /v1/itens-da-compra?cnpjOrgao=88600655000141&anoCompra=2026&sequencialCompra=316&limit=1000
+```
+
+O front tem esses três dados em qualquer item já exibido na tela:
+
+| Parâmetro | De onde vem na resposta |
+|---|---|
+| `cnpjOrgao` | `resultado[].orgaoEntidade.cnpj` |
+| `anoCompra` | `resultado[].compra.anoCompra` |
+| `sequencialCompra` | `resultado[].compra.sequencialCompra` |
+
+**Como este modo se comporta:**
+
+- **Não passa pelo Elasticsearch.** A consulta vai direto ao PostgreSQL pela chave da compra (índice único `identificador_do_orgao + ano_compra + sequencial_compra`).
+- **Os três são tudo ou nada.** Informar um ou dois deles retorna `400`.
+- **O CNPJ é normalizado:** `88.600.655/0001-41` e `88600655000141` encontram a mesma compra.
+- **Ordenação por `numeroItem` crescente** — a ordem natural do edital, não por relevância.
+- **`totalHits` é exato** (o total de itens do edital, já considerando os filtros aplicados) e a paginação por `cursor` funciona normalmente. O `limit` máximo continua sendo `1000`; editais maiores exigem seguir o `nextCursor`.
+- Como todos os itens são da mesma compra, `resultado` traz **um único elemento** com todos os itens dentro de `compra.itemDaCompra`.
+
+**Filtros combinados com a tripla:**
+
+| Filtro | Comportamento neste modo |
+|---|---|
+| `descricao` | Aplicado como **busca por substring, sem acento-insensibilidade e sem correção de digitação**, sobre a descrição dos itens do edital. |
+| `objetoDaCompra` | Aplicado como substring sobre o objeto da compra — como todos os itens são da mesma compra, é tudo ou nada. |
+| `valor*Homologado*` | Aplicados normalmente, e aqui **entram no `totalHits`**. |
+| `ufSigla`, `razaoSocial`, `dataInclusao*`, `dataDaAta*`, `apenasComAdesao`, `apenasComAtaVigente` | **Ignorados** — são resolvidos no Elasticsearch, que não participa deste modo. |
+
+> ⚠️ **`descricao` muda de semântica neste modo.** Na busca normal ela é um match difuso no Elasticsearch (`fuzziness = AUTO`), que tolera erros de digitação. Aqui é uma comparação literal de substring: `descricao=notbook` acha "notebook" na busca normal e **não acha nada** no modo compra específica. Se a intenção do botão é "carregar todos os itens deste edital", **não envie `descricao`**.
 
 ---
 

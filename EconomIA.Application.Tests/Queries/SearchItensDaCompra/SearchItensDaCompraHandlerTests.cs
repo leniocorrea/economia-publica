@@ -554,4 +554,150 @@ public class SearchItensDaCompraHandlerTests {
 			DateTime.UtcNow,
 			"Serviço de teste");
 	}
+
+	[Fact]
+	public async Task chave_da_compra_nao_consulta_o_indice() {
+		ConfigurarMocks(
+			new SearchResult(ImmutableArray<Int64>.Empty, 0, false),
+			ImmutableArray.Create(CriarItemDoEdital(1, 1)));
+
+		var query = new SearchItensDaCompraQuery.Query(
+			null, null, null, null,
+			CnpjOrgao: "88600655000141",
+			AnoCompra: 2026,
+			SequencialCompra: 316);
+
+		var result = await handler.Handle(query, CancellationToken.None);
+
+		result.IsSuccess.Should().BeTrue();
+
+		await searcher.DidNotReceiveWithAnyArgs().Search(default, default, default, default);
+		await reader.Received(1).FilterWithCompraAndOrgao(
+			Arg.Any<EconomIA.Common.Domain.Specification<ItemDaCompra>>(),
+			Arg.Any<CancellationToken>());
+	}
+
+	[Fact]
+	public async Task chave_da_compra_ordena_os_itens_pelo_numero_do_item() {
+		var itens = ImmutableArray.Create(
+			CriarItemDoEdital(30, 3),
+			CriarItemDoEdital(10, 1),
+			CriarItemDoEdital(20, 2));
+
+		ConfigurarMocks(new SearchResult(ImmutableArray<Int64>.Empty, 0, false), itens);
+
+		var query = new SearchItensDaCompraQuery.Query(
+			null, null, null, null,
+			CnpjOrgao: "88600655000141",
+			AnoCompra: 2026,
+			SequencialCompra: 316);
+
+		var result = await handler.Handle(query, CancellationToken.None);
+
+		result.IsSuccess.Should().BeTrue();
+		result.Value.Items.Select(x => x.NumeroItem).Should().ContainInOrder(1, 2, 3);
+		result.Value.TotalHits.Should().Be(3);
+		result.Value.HasMoreItems.Should().BeFalse();
+	}
+
+	[Fact]
+	public async Task chave_da_compra_pagina_os_itens_do_edital() {
+		var itens = Enumerable.Range(1, 5)
+			.Select(numero => CriarItemDoEdital(numero, numero))
+			.ToImmutableArray();
+
+		ConfigurarMocks(new SearchResult(ImmutableArray<Int64>.Empty, 0, false), itens);
+
+		var query = new SearchItensDaCompraQuery.Query(
+			null, null, Cursor: "2", Limit: 2,
+			CnpjOrgao: "88600655000141",
+			AnoCompra: 2026,
+			SequencialCompra: 316);
+
+		var result = await handler.Handle(query, CancellationToken.None);
+
+		result.IsSuccess.Should().BeTrue();
+		result.Value.Items.Select(x => x.NumeroItem).Should().ContainInOrder(3, 4);
+		result.Value.TotalHits.Should().Be(5);
+		result.Value.HasMoreItems.Should().BeTrue();
+		result.Value.NextCursor.Should().Be("4");
+	}
+
+	[Fact]
+	public async Task ultima_pagina_do_edital_nao_devolve_cursor() {
+		var itens = Enumerable.Range(1, 3)
+			.Select(numero => CriarItemDoEdital(numero, numero))
+			.ToImmutableArray();
+
+		ConfigurarMocks(new SearchResult(ImmutableArray<Int64>.Empty, 0, false), itens);
+
+		var query = new SearchItensDaCompraQuery.Query(
+			null, null, Cursor: "2", Limit: 2,
+			CnpjOrgao: "88600655000141",
+			AnoCompra: 2026,
+			SequencialCompra: 316);
+
+		var result = await handler.Handle(query, CancellationToken.None);
+
+		result.IsSuccess.Should().BeTrue();
+		result.Value.Items.Should().HaveCount(1);
+		result.Value.HasMoreItems.Should().BeFalse();
+		result.Value.NextCursor.Should().BeNull();
+	}
+
+	[Theory]
+	[InlineData("88600655000141", 2026, null)]
+	[InlineData("88600655000141", null, 316)]
+	[InlineData(null, 2026, 316)]
+	[InlineData("88600655000141", null, null)]
+	[InlineData(null, null, 316)]
+	public async Task chave_da_compra_incompleta_retorna_erro_sem_consultar_nada(String? cnpjOrgao, Int32? anoCompra, Int32? sequencialCompra) {
+		var query = new SearchItensDaCompraQuery.Query(
+			null, null, null, null,
+			CnpjOrgao: cnpjOrgao,
+			AnoCompra: anoCompra,
+			SequencialCompra: sequencialCompra);
+
+		var result = await handler.Handle(query, CancellationToken.None);
+
+		result.IsFailure.Should().BeTrue();
+		result.Error.ResultError.ToProblemString().Should().Contain("cnpjOrgao, anoCompra e sequencialCompra");
+
+		await searcher.DidNotReceiveWithAnyArgs().Search(default, default, default, default);
+		await reader.DidNotReceiveWithAnyArgs().FilterWithCompraAndOrgao(default!, default);
+	}
+
+	[Fact]
+	public async Task chave_da_compra_mantem_o_filtro_de_valor_homologado() {
+		var itens = ImmutableArray.Create(
+			CriarItemComResultado(1, 400m, null),
+			CriarItemComResultado(2, 600m, null));
+
+		ConfigurarMocks(new SearchResult(ImmutableArray<Int64>.Empty, 0, false), itens);
+
+		var query = new SearchItensDaCompraQuery.Query(
+			null, null, null, null,
+			null, null, null, null,
+			500m, null, null, null,
+			CnpjOrgao: "88600655000141",
+			AnoCompra: 2026,
+			SequencialCompra: 316);
+
+		var result = await handler.Handle(query, CancellationToken.None);
+
+		result.IsSuccess.Should().BeTrue();
+		result.Value.Items.Should().HaveCount(1);
+		result.Value.Items[0].Id.Should().Be(2);
+		result.Value.TotalHits.Should().Be(1);
+	}
+
+	private static ItemDaCompra CriarItemDoEdital(Int64 id, Int32 numeroItem) {
+		return new ItemDaCompra(
+			id,
+			316,
+			numeroItem,
+			DateTime.UtcNow,
+			DateTime.UtcNow,
+			$"Item {numeroItem} do edital");
+	}
 }

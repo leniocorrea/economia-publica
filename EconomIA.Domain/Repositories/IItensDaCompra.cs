@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -54,6 +55,16 @@ public static class ItensDaCompraSpecifications {
 	public static Specification<ItemDaCompra> WithIds(ImmutableArray<Int64> ids) => new WithIds(ids);
 	public static Specification<ItemDaCompra> WithCompra(Int64 identificadorDaCompra) => new WithCompra(identificadorDaCompra);
 	public static Specification<ItemDaCompra> ComResultado() => new ComResultado();
+	public static Specification<ItemDaCompra> DaCompraDoOrgao(String cnpjDoOrgao, Int32 anoCompra, Int32 sequencialCompra) =>
+		new DaCompraDoOrgao(SomenteDigitos(cnpjDoOrgao), anoCompra, sequencialCompra);
+	public static Specification<ItemDaCompra> ComDescricaoContendo(String termo) =>
+		new ComDescricaoContendo(termo.Trim().ToLower());
+	public static Specification<ItemDaCompra> ComObjetoDaCompraContendo(String termo) =>
+		new ComObjetoDaCompraContendo(termo.Trim().ToLower());
+
+	private static String SomenteDigitos(String valor) {
+		return new String(valor.Where(Char.IsDigit).ToArray());
+	}
 }
 
 file class All : Specification<ItemDaCompra> {
@@ -74,4 +85,23 @@ file class WithCompra(Int64 identificadorDaCompra) : Specification<ItemDaCompra>
 
 file class ComResultado : Specification<ItemDaCompra> {
 	public override Expression<Func<ItemDaCompra, Boolean>> Rule() => x => x.TemResultado;
+}
+
+file class DaCompraDoOrgao(String cnpjDoOrgao, Int32 anoCompra, Int32 sequencialCompra) : Specification<ItemDaCompra> {
+	public override Expression<Func<ItemDaCompra, Boolean>> Rule() =>
+		x => x.Compra != null
+			&& x.Compra.Orgao != null
+			&& x.Compra.Orgao.Cnpj == cnpjDoOrgao
+			&& x.Compra.AnoCompra == anoCompra
+			&& x.Compra.SequencialCompra == sequencialCompra;
+}
+
+file class ComDescricaoContendo(String termo) : Specification<ItemDaCompra> {
+	public override Expression<Func<ItemDaCompra, Boolean>> Rule() =>
+		x => x.Descricao != null && x.Descricao.ToLower().Contains(termo);
+}
+
+file class ComObjetoDaCompraContendo(String termo) : Specification<ItemDaCompra> {
+	public override Expression<Func<ItemDaCompra, Boolean>> Rule() =>
+		x => x.Compra != null && x.Compra.ObjetoCompra != null && x.Compra.ObjetoCompra.ToLower().Contains(termo);
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
@@ -31,7 +32,10 @@ public static class SearchItensDaCompra {
 		Boolean? ApenasComAtaVigente = null,
 		DateTime? DataDaAtaInicio = null,
 		DateTime? DataDaAtaFim = null,
-		String? ObjetoDaCompra = null) : IQuery<Response>;
+		String? ObjetoDaCompra = null,
+		String? CnpjOrgao = null,
+		Int32? AnoCompra = null,
+		Int32? SequencialCompra = null) : IQuery<Response>;
 
 	public record Response(Response.Item[] Items, Int64 TotalHits, Boolean HasMoreItems, String? NextCursor) {
 		public record Item(
@@ -149,71 +153,32 @@ public static class SearchItensDaCompra {
 				return Failure(InvalidArgument, "Data inicial da ata não pode ser maior que a data final.");
 			}
 
-			var filters = new SearchFilters(
-				query.DataInclusaoInicio,
-				query.DataInclusaoFim,
-				query.RazaoSocial,
-				query.UfSigla,
-				query.ValorUnitarioHomologadoMinimo,
-				query.ValorUnitarioHomologadoMaximo,
-				query.ValorTotalHomologadoMinimo,
-				query.ValorTotalHomologadoMaximo,
-				query.ApenasComAdesao,
-				query.ApenasComAtaVigente,
-				query.DataDaAtaInicio,
-				query.DataDaAtaFim,
-				query.ObjetoDaCompra);
+			var camposDaChaveDaCompra = new[] {
+				!String.IsNullOrWhiteSpace(query.CnpjOrgao),
+				query.AnoCompra.HasValue,
+				query.SequencialCompra.HasValue
+			};
 
-			var searchResult = await searcher.Search(query.Descricao, filters, pagination, cancellationToken);
+			var camposInformadosDaChave = camposDaChaveDaCompra.Count(informado => informado);
 
-			if (searchResult.IsFailure) {
-				return Failure(searchResult.Error.ToItemError());
+			if (camposInformadosDaChave is > 0 and < 3) {
+				return Failure(InvalidArgument, "Para buscar os itens de uma compra específica informe cnpjOrgao, anoCompra e sequencialCompra em conjunto.");
 			}
 
-			var search = searchResult.Value;
+			var buscaResult = camposInformadosDaChave == 3
+				? await BuscarItensDaCompraEspecifica(query, pagination, cancellationToken)
+				: await BuscarItensPeloIndice(query, pagination, cancellationToken);
 
-			if (search.Ids.Length == 0) {
-				return Success(new Response(Array.Empty<Response.Item>(), 0, false, null));
+			if (buscaResult.IsFailure) {
+				return Failure(buscaResult.Error);
 			}
 
-			var filter = ItensDaCompraSpecifications.WithIds(search.Ids);
-			var itemsResult = await reader.FilterWithCompraAndOrgao(filter, cancellationToken);
+			var busca = buscaResult.Value;
+			var itensParaProcessar = busca.Itens;
 
-			if (itemsResult.IsFailure) {
-				return Failure(itemsResult.Error.ToItemError());
+			if (itensParaProcessar.Length == 0) {
+				return Success(new Response(Array.Empty<Response.Item>(), busca.TotalHits, false, null));
 			}
-
-			var itensDoElastic = itemsResult.Value;
-
-			var posicaoNaBusca = search.Ids
-				.Select((identificador, posicao) => new { identificador, posicao })
-				.ToDictionary(x => x.identificador, x => x.posicao);
-
-			var itensFiltrados = itensDoElastic
-				.OrderBy(x => posicaoNaBusca.TryGetValue(x.Id, out var posicao) ? posicao : Int32.MaxValue)
-				.AsEnumerable();
-
-			if (query.ValorUnitarioHomologadoMinimo.HasValue) {
-				itensFiltrados = itensFiltrados.Where(x =>
-					x.Resultados.Any(r => r.ValorUnitarioHomologado >= query.ValorUnitarioHomologadoMinimo.Value));
-			}
-
-			if (query.ValorUnitarioHomologadoMaximo.HasValue) {
-				itensFiltrados = itensFiltrados.Where(x =>
-					x.Resultados.Any(r => r.ValorUnitarioHomologado <= query.ValorUnitarioHomologadoMaximo.Value));
-			}
-
-			if (query.ValorTotalHomologadoMinimo.HasValue) {
-				itensFiltrados = itensFiltrados.Where(x =>
-					x.Resultados.Any(r => r.ValorTotalHomologado >= query.ValorTotalHomologadoMinimo.Value));
-			}
-
-			if (query.ValorTotalHomologadoMaximo.HasValue) {
-				itensFiltrados = itensFiltrados.Where(x =>
-					x.Resultados.Any(r => r.ValorTotalHomologado <= query.ValorTotalHomologadoMaximo.Value));
-			}
-
-			var itensParaProcessar = itensFiltrados.ToImmutableArray();
 
 			var numerosControlePncp = itensParaProcessar
 				.Where(x => x.Compra is not null)
@@ -366,11 +331,118 @@ public static class SearchItensDaCompra {
 				})
 				.ToArray();
 
-			var nextCursor = search.HasMoreItems
+			var nextCursor = busca.HasMoreItems
 				? (Int32.TryParse(query.Cursor, out var current) ? current + pagination.Limit : pagination.Limit).ToString()
 				: null;
 
-			return Success(new Response(items, search.TotalHits, search.HasMoreItems, nextCursor));
+			return Success(new Response(items, busca.TotalHits, busca.HasMoreItems, nextCursor));
 		}
+
+		private async Task<Result<ItensEncontrados, HandlerResultError>> BuscarItensPeloIndice(
+			Query query,
+			PaginationParameters pagination,
+			CancellationToken cancellationToken) {
+			var filters = new SearchFilters(
+				query.DataInclusaoInicio,
+				query.DataInclusaoFim,
+				query.RazaoSocial,
+				query.UfSigla,
+				query.ValorUnitarioHomologadoMinimo,
+				query.ValorUnitarioHomologadoMaximo,
+				query.ValorTotalHomologadoMinimo,
+				query.ValorTotalHomologadoMaximo,
+				query.ApenasComAdesao,
+				query.ApenasComAtaVigente,
+				query.DataDaAtaInicio,
+				query.DataDaAtaFim,
+				query.ObjetoDaCompra);
+
+			var searchResult = await searcher.Search(query.Descricao, filters, pagination, cancellationToken);
+
+			if (searchResult.IsFailure) {
+				return Result.Failure<ItensEncontrados, HandlerResultError>(searchResult.Error.ToItemError());
+			}
+
+			var search = searchResult.Value;
+
+			if (search.Ids.Length == 0) {
+				return new ItensEncontrados(ImmutableArray<Domain.ItemDaCompra>.Empty, 0, false);
+			}
+
+			var itemsResult = await reader.FilterWithCompraAndOrgao(ItensDaCompraSpecifications.WithIds(search.Ids), cancellationToken);
+
+			if (itemsResult.IsFailure) {
+				return Result.Failure<ItensEncontrados, HandlerResultError>(itemsResult.Error.ToItemError());
+			}
+
+			var posicaoNaBusca = search.Ids
+				.Select((identificador, posicao) => new { identificador, posicao })
+				.ToDictionary(x => x.identificador, x => x.posicao);
+
+			var itensOrdenados = itemsResult.Value
+				.OrderBy(x => posicaoNaBusca.TryGetValue(x.Id, out var posicao) ? posicao : Int32.MaxValue);
+
+			var itens = AplicarFiltrosDeValorHomologado(itensOrdenados, query).ToImmutableArray();
+
+			return new ItensEncontrados(itens, search.TotalHits, search.HasMoreItems);
+		}
+
+		private async Task<Result<ItensEncontrados, HandlerResultError>> BuscarItensDaCompraEspecifica(
+			Query query,
+			PaginationParameters pagination,
+			CancellationToken cancellationToken) {
+			var filtro = ItensDaCompraSpecifications.DaCompraDoOrgao(
+				query.CnpjOrgao!,
+				query.AnoCompra!.Value,
+				query.SequencialCompra!.Value);
+
+			if (!String.IsNullOrWhiteSpace(query.Descricao)) {
+				filtro += ItensDaCompraSpecifications.ComDescricaoContendo(query.Descricao);
+			}
+
+			if (!String.IsNullOrWhiteSpace(query.ObjetoDaCompra)) {
+				filtro += ItensDaCompraSpecifications.ComObjetoDaCompraContendo(query.ObjetoDaCompra);
+			}
+
+			var itemsResult = await reader.FilterWithCompraAndOrgao(filtro, cancellationToken);
+
+			if (itemsResult.IsFailure) {
+				return Result.Failure<ItensEncontrados, HandlerResultError>(itemsResult.Error.ToItemError());
+			}
+
+			var itensDaCompra = AplicarFiltrosDeValorHomologado(itemsResult.Value.OrderBy(x => x.NumeroItem), query)
+				.ToImmutableArray();
+
+			var offset = Int32.TryParse(query.Cursor, out var cursor) ? Math.Max(cursor, 0) : 0;
+			var pagina = itensDaCompra.Skip(offset).Take(pagination.Limit).ToImmutableArray();
+
+			return new ItensEncontrados(pagina, itensDaCompra.Length, offset + pagina.Length < itensDaCompra.Length);
+		}
+
+		private static IEnumerable<Domain.ItemDaCompra> AplicarFiltrosDeValorHomologado(IEnumerable<Domain.ItemDaCompra> itens, Query query) {
+			if (query.ValorUnitarioHomologadoMinimo.HasValue) {
+				itens = itens.Where(x =>
+					x.Resultados.Any(r => r.ValorUnitarioHomologado >= query.ValorUnitarioHomologadoMinimo.Value));
+			}
+
+			if (query.ValorUnitarioHomologadoMaximo.HasValue) {
+				itens = itens.Where(x =>
+					x.Resultados.Any(r => r.ValorUnitarioHomologado <= query.ValorUnitarioHomologadoMaximo.Value));
+			}
+
+			if (query.ValorTotalHomologadoMinimo.HasValue) {
+				itens = itens.Where(x =>
+					x.Resultados.Any(r => r.ValorTotalHomologado >= query.ValorTotalHomologadoMinimo.Value));
+			}
+
+			if (query.ValorTotalHomologadoMaximo.HasValue) {
+				itens = itens.Where(x =>
+					x.Resultados.Any(r => r.ValorTotalHomologado <= query.ValorTotalHomologadoMaximo.Value));
+			}
+
+			return itens;
+		}
+
+		private record ItensEncontrados(ImmutableArray<Domain.ItemDaCompra> Itens, Int64 TotalHits, Boolean HasMoreItems);
 	}
 }
