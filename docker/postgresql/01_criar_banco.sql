@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS public.compra (
     valor_total_estimado NUMERIC(18,2),
     valor_total_homologado NUMERIC(18,2),
     situacao_compra_nome VARCHAR(200),
+    data_inclusao TIMESTAMP,
     data_abertura_proposta TIMESTAMP,
     data_encerramento_proposta TIMESTAMP,
     amparo_legal_nome VARCHAR(500),
@@ -173,6 +174,7 @@ CREATE TABLE IF NOT EXISTS public.ata (
     data_inclusao TIMESTAMP,
     data_atualizacao TIMESTAMP,
     data_atualizacao_global TIMESTAMP,
+    possibilidade_adesao BOOLEAN,
     usuario VARCHAR(200),
     criado_em TIMESTAMP DEFAULT now(),
     atualizado_em TIMESTAMP DEFAULT now()
